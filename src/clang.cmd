@@ -2,7 +2,7 @@
 
 @where zig >nul 2>&1
 @if ERRORLEVEL 1 (
-  echo Error: zig is not on the PATH. Install zig and make sure it's on PATH. Follow instructions at https://github.com/MichalStrehovsky/PublishAotCross.
+  echo Error: zig is not on the PATH. Install zig and make sure it's on PATH. Follow instructions at https://github.com/fallenwood/PublishAotCross.
   exit /B 1
 )
 

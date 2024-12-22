@@ -4,30 +4,71 @@
     <DisableUnsupportedError>true</DisableUnsupportedError>
   </PropertyGroup>
 
-  <UsingTask TaskName="PrependPath"
+  <UsingTask TaskName="PrependPathIfCrossCompile"
              TaskFactory="RoslynCodeTaskFactory"
              AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
 
     <ParameterGroup>
-      <Value ParameterType="System.String" Required="true" />
+      <MSBuildThisFileDirectory ParameterType="System.String" Required="true" />
+      <RuntimeIdentifier ParameterType="System.String" Required="true" />
     </ParameterGroup>
 
     <Task>
       <Using Namespace="System" />
       <Using Namespace="System.IO" />
+      <Using Namespace="System.Diagnostics" />
+      <Using Namespace="System.Runtime.InteropServices" />
       <Code Type="Fragment" Language="cs">
         <![CDATA[
-          Environment.SetEnvironmentVariable("PATH", Value + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+            Console.WriteLine("Running custom toolchain environment setup for cross building...");
+            var buildenv = "";
+            var isWindows = false;
+            var isDebug = Environment.GetEnvironmentVariable("DOTNET_FALLENWOOD_PUBLISHAOTCROSS") == bool.TrueString;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+              var osDescription = RuntimeInformation.OSDescription;
+              buildenv += "linux";
+              if (osDescription.Contains("GNU")) {
+                // noop
+              } else if (osDescription.Contains("MUSL")) {
+               buildenv += "-musl";
+              } else {
+                // TODO: android/loongarch/bionic/osx/ios
+              }
+            } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+              buildenv += "win";
+              isWindows = true;
+            }
+
+            if (RuntimeInformation.OSArchitecture == Architecture.X64) {
+              buildenv += "-x64";
+            } else if (RuntimeInformation.OSArchitecture == Architecture.Arm64) {
+              buildenv += "-arm64";
+            }
+
+            if (buildenv != RuntimeIdentifier) {
+              Environment.SetEnvironmentVariable("PATH", MSBuildThisFileDirectory + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+
+              if (!isWindows) {
+                var cmd = new Process();
+                cmd.StartInfo.FileName = "chmod";
+                cmd.StartInfo.Arguments = "-R +x " + MSBuildThisFileDirectory;
+                cmd.StartInfo.CreateNoWindow = true;
+                cmd.StartInfo.UseShellExecute = false;
+                cmd.Start();
+                cmd.WaitForExit();
+              }
+              if (isDebug) { Console.WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}"); }
+            } else {
+              if (isDebug) { Console.WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment..."); }
+            }
         ]]>
       </Code>
     </Task>
-
   </UsingTask>
-
   <Target Name="SetPathToClang"
           BeforeTargets="SetupOSSpecificProps">
 
-    <PrependPath Value="$(MSBuildThisFileDirectory)" />
+    <PrependPathIfCrossCompile MSBuildThisFileDirectory="$(MSBuildThisFileDirectory)" RuntimeIdentifier="$(RuntimeIdentifier)" />
 
   </Target>
 
@@ -45,7 +86,7 @@
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">aarch64</CrossCompileArch>
 
       <TargetTriple />
-      <TargetTriple Condition="'$(CrossCompileArch)' != ''">$(CrossCompileArch)-linux-gnu</TargetTriple>
+      <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('linux'))">$(CrossCompileArch)-linux-gnu</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and ($(CrossCompileRid.StartsWith('linux-musl')) or $(CrossCompileRid.StartsWith('alpine')))">$(CrossCompileArch)-linux-musl</TargetTriple>
     </PropertyGroup>
 

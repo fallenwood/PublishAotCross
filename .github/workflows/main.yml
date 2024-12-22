@@ -7,11 +7,32 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version to create'     
-        required: true
+        description: 'Release version to create'
+        required: false
 
 jobs:
-  build_and_test:
+  build_multihost:
+    strategy:
+      matrix:
+        include:
+          - vm: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.vm }}
+    name: Build and test ${{ matrix.vm }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup zig
+        uses: goto-bus-stop/setup-zig@v2
+      - name: Build (CI)
+        run: |
+          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
+          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=false
+
+  build:
     strategy:
       matrix:
         include:
@@ -25,44 +46,57 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '8.0.x'
-          include-prerelease: true
       - name: Setup zig
-        if: ${{ github.event.inputs.version == '' }}
         uses: goto-bus-stop/setup-zig@v2
       - name: Build (CI)
-        if: ${{ github.event.inputs.version == '' }}
         run: |
-          dotnet build -t:Pack src/PublishAotCross.nuproj
+          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=false
       - name: Upload test binary
-        if: ${{ github.event.inputs.version == '' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Hello
           path: test/bin/Release/net8.0/linux-x64/publish/Hello
-      - name: Build (CD)
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet build -t:Pack src/PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}
-      - name: Archive NuGet
-        if: ${{ github.event.inputs.version != '' }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: PublishAotCross.${{ github.event.inputs.version }}.nupkg
-          path: src/bin/Debug/PublishAotCross.${{ github.event.inputs.version }}.nupkg
-      - name: Create tag
-        if: ${{ github.event.inputs.version != '' && github.actor == 'MichalStrehovsky' }}
-        run: |
-          git tag v${{ github.event.inputs.version }}
-          git push origin v${{ github.event.inputs.version }}
 
   validate:
-    needs: build_and_test
+    needs: build
     runs-on: ubuntu-latest
     name: Try launching
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
+        with:
+          name: Hello
       - name: Launch
         run: |
-          chmod +x ./Hello/Hello
-          ./Hello/Hello
+          chmod +x ./Hello
+          ./Hello
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    name: Release
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+        with:
+          nuget-version: latest
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build (CD)
+        if: ${{ github.event.inputs.version != '' }}
+        run: dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}
+      - name: Configure GitHub NuGet registry
+        if: ${{ github.event.inputs.version != '' }}
+        run: nuget sources add -name github -source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json -username ${{ github.repository_owner }} -password ${{ secrets.GITHUB_TOKEN }}
+      - name: Push to GitHub package registry
+        if: ${{ github.event.inputs.version != '' }}
+        run: nuget push src/bin/Release/*.nupkg -ApiKey ${{ secrets.GITHUB_TOKEN }} -Source github -SkipDuplicate
+      - name: Push to NuGet.org
+        if: ${{ github.event.inputs.version != '' }}
+        run: nuget push src/bin/Release/*.nupkg -ApiKey ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json -SkipDuplicate
+
