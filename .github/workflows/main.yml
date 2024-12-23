@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - vm: [windows-latest, ubuntu-latest]
+          - vm: ubuntu-22.04
     runs-on: ${{ matrix.vm }}
     name: Build and test ${{ matrix.vm }}
     steps:
