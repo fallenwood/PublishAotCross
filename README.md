@@ -37,7 +37,7 @@ Even though Zig allows crosscompiling for Windows as well, it's not possible to 
 This package auto detects if host and target platforms are different to determine if Zig is used or not. Even though on the same platform, Zig can also be used as the dropped in C Compiler with
 
 ```
-dotnet publiss -r linux-x64 /p:PublishAot=true /p:AotPreferZig=true
+dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferZig=true
 ```
 
 ## Tested Variants
