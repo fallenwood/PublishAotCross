@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <DisableUnsupportedError>true</DisableUnsupportedError>
+    <AotPreferZig>false</AotPreferZig>
   </PropertyGroup>
 
   <UsingTask TaskName="PrependPathIfCrossCompile"
@@ -11,6 +12,7 @@
     <ParameterGroup>
       <MSBuildThisFileDirectory ParameterType="System.String" Required="true" />
       <RuntimeIdentifier ParameterType="System.String" Required="true" />
+      <AotPreferZig ParameterType="System.Boolean" Required="true" />
     </ParameterGroup>
 
     <Task>
@@ -45,7 +47,7 @@
               buildenv += "-arm64";
             }
 
-            if (buildenv != RuntimeIdentifier) {
+            if (buildenv != RuntimeIdentifier || AotPreferZig) {
               Environment.SetEnvironmentVariable("PATH", MSBuildThisFileDirectory + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
 
               if (!isWindows) {
@@ -65,10 +67,14 @@
       </Code>
     </Task>
   </UsingTask>
-  <Target Name="SetPathToClang"
-          BeforeTargets="SetupOSSpecificProps">
+  <Target
+    Name="SetPathToClang"
+    BeforeTargets="SetupOSSpecificProps">
 
-    <PrependPathIfCrossCompile MSBuildThisFileDirectory="$(MSBuildThisFileDirectory)" RuntimeIdentifier="$(RuntimeIdentifier)" />
+    <PrependPathIfCrossCompile
+      MSBuildThisFileDirectory="$(MSBuildThisFileDirectory)"
+      RuntimeIdentifier="$(RuntimeIdentifier)"
+      AotPreferZig="$(AotPreferZig)" />
 
   </Target>
 
