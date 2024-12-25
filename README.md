@@ -44,7 +44,7 @@ dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferZig=true
 
 |                    |(Host)Windows x64|Linux GNU x64|Linux GNU arm64|Linux MUSL x64|Linux MUSL arm64|
 |--------------------|-----------------|-------------|---------------|--------------|----------------|
-|(target)Windowx x64 |X                |X            |X              |X             |X               |
+|(target)Windows x64 |X                |X            |X              |X             |X               |
 |Linux GNU x64       |O                |O            |O              |N/A           |N/A             |
 |Linux GNU arm64     |O                |O            |O              |N/A           |N/A             |
 |Linux MUSL x64      |O                |O            |O              |N/A           |N/A             |
