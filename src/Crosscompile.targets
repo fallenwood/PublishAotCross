@@ -3,7 +3,19 @@
   <PropertyGroup>
     <DisableUnsupportedError>true</DisableUnsupportedError>
     <AotPreferZig>false</AotPreferZig>
+    <HostRuntimeIdentifier Condition="'$(HostRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</HostRuntimeIdentifier>
+    <ZigVersion Condition="'$(ZigVersion)' == ''">0.13.0.1</ZigVersion>
+    <UseExternalZig Condition="'$(UseExternalZig)' == ''">false</UseExternalZig>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vezel.Zig.Toolsets.$(HostRuntimeIdentifier)"
+      Version="$(ZigVersion)"
+      PrivateAssets="all"
+      IsImplicitlyDefined="true"
+      GeneratePathProperty="true"
+      Condition="'$(UseExternalZig)' == 'false'" />
+  </ItemGroup>
 
   <UsingTask TaskName="PrependPathIfCrossCompile"
              TaskFactory="RoslynCodeTaskFactory"
@@ -12,7 +24,9 @@
     <ParameterGroup>
       <MSBuildThisFileDirectory ParameterType="System.String" Required="true" />
       <RuntimeIdentifier ParameterType="System.String" Required="true" />
+      <ZigPath ParameterType="System.String" Required="true" />
       <AotPreferZig ParameterType="System.Boolean" Required="true" />
+      <UseExternalZig ParameterType="System.Boolean" Required="true" />
     </ParameterGroup>
 
     <Task>
@@ -23,6 +37,11 @@
       <Code Type="Fragment" Language="cs">
         <![CDATA[
             Console.WriteLine("Running custom toolchain environment setup for cross building...");
+
+            if (!UseExternalZig) {
+              Environment.SetEnvironmentVariable("PATH", ZigPath + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+            }
+
             var buildenv = "";
             var isWindows = false;
             var isDebug = Environment.GetEnvironmentVariable("DOTNET_FALLENWOOD_PUBLISHAOTCROSS") == bool.TrueString;
@@ -69,14 +88,29 @@
       </Code>
     </Task>
   </UsingTask>
+
   <Target
     Name="SetPathToClang"
     BeforeTargets="SetupOSSpecificProps">
 
+    <PropertyGroup Condition="$(HostRuntimeIdentifier.StartsWith('win-'))">
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x86'))">$(PkgVezel_Zig_Toolsets_win-x86)/tools</ZigPath>
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x64'))">$(PkgVezel_Zig_Toolsets_win-x64)/tools</ZigPath>
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-arm64'))">$(PkgVezel_Zig_Toolsets_win-arm64)/tools</ZigPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(HostRuntimeIdentifier.StartsWith('linux-'))">
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x86'))">$(PkgVezel_Zig_Toolsets_linux-x86)/tools</ZigPath>
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x64'))">$(PkgVezel_Zig_Toolsets_linux-x64)/tools</ZigPath>
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-arm64'))">$(PkgVezel_Zig_Toolsets_linux-arm64)/tools</ZigPath>
+    </PropertyGroup>
+
     <PrependPathIfCrossCompile
       MSBuildThisFileDirectory="$(MSBuildThisFileDirectory)"
       RuntimeIdentifier="$(RuntimeIdentifier)"
-      AotPreferZig="$(AotPreferZig)" />
+      ZigPath="$(ZigPath)"
+      AotPreferZig="$(AotPreferZig)"
+      UseExternalZig="$(UseExternalZig)" />
 
   </Target>
 

@@ -16,13 +16,15 @@ This nuget package allows using [Zig](https://ziglang.org/) as the linker/sysroo
 
 ### Typical Cross build
 
-1. [Download](https://ziglang.org/download/) an archive with Zig for your host machine, extract it and place it on your PATH. I'm using zig 0.13.0 stable.
+By default it relies on Zig provided by the unofficial [Vezel.Zig.Toolsets](https://github.com/vezel-dev/zig-toolsets) NuGet package. You can specify version of this package using the `ZigVersion` property. Instructions for using your own Zig binaries are near the end of this document.
 
-2. Optional: [download](https://releases.llvm.org/) LLVM. We only need llvm-objcopy executable so if you care about size, you can delete the rest. The executable needs to be on PATH - you could copy it next to the Zig executable. This step is optional and is required only to strip symbols (make the produced executables smaller). If you don't care about stripping symbols, you can skip it.
+If you don't want to use Zig from the Vezel.Zig.Toolsets NuGet package, you can specify `/p:UseExternalZig=true`. This will use whatever Zig is on your PATH. [Download](https://ziglang.org/download/) an archive with Zig for your host machine, extract it and place it on your PATH.
 
-3. To your project that is already using Native AOT, add a reference to this NuGet package.
+1. Optional: [download](https://releases.llvm.org/) LLVM. We only need llvm-objcopy executable so if you care about size, you can delete the rest. The executable needs to be on PATH - you could copy it next to the Zig executable. This step is optional and is required only to strip symbols (make the produced executables smaller). If you don't care about stripping symbols, you can skip it.
 
-4. Publish for one of the newly available RIDs:
+2. To your project that is already using Native AOT, add a reference to this NuGet package.
+
+3. Publish for one of the newly available RIDs:
     * `dotnet publish -r linux-x64`
     * `dotnet publish -r linux-arm64`
     * `dotnet publish -r linux-musl-x64`
