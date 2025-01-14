@@ -27,6 +27,7 @@ This nuget package allows using [Zig](https://ziglang.org/) as the linker/sysroo
     * `dotnet publish -r linux-arm64`
     * `dotnet publish -r linux-musl-x64`
     * `dotnet publish -r linux-musl-arm64`
+    * `dotnet publish -r linux-musl-arm` (Only works for net >= 9.0)
 
     If you skipped the second optional step to download llvm-objcopy, you must also pass `/p:StripSymbols=false` to the publish command, or you'll see an error instructing you to do that.
 
@@ -49,5 +50,7 @@ dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferZig=true
 |Linux GNU arm64     |O                |O            |O              |N/A           |N/A             |
 |Linux MUSL x64      |O                |O            |O              |N/A           |N/A             |
 |Linux MUSL arm64    |O                |O            |O              |N/A           |N/A             |
+|Linux MUSL arm      |N/A              |O            |N/A            |N/A           |N/A             |
 
 Notes: `N/A` means it's might work but not tested.
+
