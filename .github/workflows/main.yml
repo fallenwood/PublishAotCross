@@ -87,7 +87,11 @@ jobs:
         uses: NuGet/setup-nuget@v2
         with:
           nuget-version: latest
-      - name: Setup dotnet
+      - name: Setup dotnet 8.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup dotnet 9.0
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
