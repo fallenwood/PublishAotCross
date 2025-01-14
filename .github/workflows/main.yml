@@ -21,16 +21,22 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: Setup dotnet
+      - name: Setup dotnet 8.0
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '8.0.x'
+      - name: Setup dotnet 9.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '9.0.x'
       - name: Setup zig
         uses: goto-bus-stop/setup-zig@v2
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=false
+          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-linux-musl-x64
+          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=false -o output-linux-musl-arm
 
   build:
     strategy:
@@ -86,7 +92,7 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
       - name: Build (CD)
         if: ${{ github.event.inputs.version != '' }}
         run: dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}

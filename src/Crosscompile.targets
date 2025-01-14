@@ -45,6 +45,8 @@
               buildenv += "-x64";
             } else if (RuntimeInformation.OSArchitecture == Architecture.Arm64) {
               buildenv += "-arm64";
+            } else if (RuntimeInformation.OSArchitecture == Architecture.Arm) {
+              buildenv += "-arm";
             }
 
             if (buildenv != RuntimeIdentifier || AotPreferZig) {
@@ -90,10 +92,12 @@
       <CrossCompileArch />
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x64'))">x86_64</CrossCompileArch>
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">aarch64</CrossCompileArch>
+      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm'))">arm</CrossCompileArch>
 
       <TargetTriple />
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('linux'))">$(CrossCompileArch)-linux-gnu</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and ($(CrossCompileRid.StartsWith('linux-musl')) or $(CrossCompileRid.StartsWith('alpine')))">$(CrossCompileArch)-linux-musl</TargetTriple>
+      <TargetTriple Condition="'$(CrossCompileArch)' == 'arm' and $(CrossCompileRid.StartsWith('linux-musl'))">thumb-linux-musleabihf</TargetTriple>
     </PropertyGroup>
 
     <ItemGroup>
