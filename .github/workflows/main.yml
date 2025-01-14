@@ -29,8 +29,6 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
-      - name: Setup zig
-        uses: goto-bus-stop/setup-zig@v2
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
@@ -57,7 +55,7 @@ jobs:
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
-          dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=false
+          dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=false -p:UseExternalZig=true
       - name: Upload test binary
         uses: actions/upload-artifact@v4
         with:
