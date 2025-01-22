@@ -58,6 +58,8 @@
             } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
               buildenv += "win";
               isWindows = true;
+            } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+              buildenv += "osx";
             }
 
             if (RuntimeInformation.OSArchitecture == Architecture.X64) {
@@ -105,6 +107,11 @@
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-arm64'))">$(PkgVezel_Zig_Toolsets_linux-arm64)/tools</ZigPath>
     </PropertyGroup>
 
+    <PropertyGroup Condition="$(HostRuntimeIdentifier.StartsWith('osx-'))">
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x64'))">$(PkgVezel_Zig_Toolsets_osx-x64)/tools</ZigPath>
+      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-arm64'))">$(PkgVezel_Zig_Toolsets_osx-arm64)/tools</ZigPath>
+    </PropertyGroup>
+
     <PrependPathIfCrossCompile
       MSBuildThisFileDirectory="$(MSBuildThisFileDirectory)"
       RuntimeIdentifier="$(RuntimeIdentifier)"
@@ -132,6 +139,7 @@
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('linux'))">$(CrossCompileArch)-linux-gnu</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and ($(CrossCompileRid.StartsWith('linux-musl')) or $(CrossCompileRid.StartsWith('alpine')))">$(CrossCompileArch)-linux-musl</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' == 'arm' and $(CrossCompileRid.StartsWith('linux-musl'))">thumb-linux-musleabihf</TargetTriple>
+      <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('osx'))">$(CrossCompileArch)-macos-none</TargetTriple>
     </PropertyGroup>
 
     <ItemGroup>

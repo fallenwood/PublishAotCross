@@ -15,12 +15,19 @@ args=$(echo "$args" | sed 's/-lz //g')
 # Work around a .NET 8 Preview 6 issue
 args=${args//'-Wl,-rpath,$ORIGIN'/-Wl,-rpath,\$ORIGIN}
 
+echo "before: $args"
+echo "before: $args"
+echo "before: $args"
 
 # Work around parameters unsupported by zig. Just drop them from the command line.
 args=${args//--discard-all/--as-needed}
 args=$(echo "$args" | sed 's/-Wl,-pie //g')
 args=$(echo "$args" | sed 's/-pie //g')
 args=$(echo "$args" | sed 's/-Wl,-e0x0 //g')
+
+echo "after: $args"
+echo "after: $args"
+echo "after: $args"
 
 # Works around zig linker dropping necessary parts of the executable.
 arr=($args)
