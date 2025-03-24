@@ -40,6 +40,7 @@ jobs:
           cp ${xwin_version}/xwin $HOME/.local/bin
       - name: Build (CI)
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=false
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-linux-musl-x64
