@@ -96,7 +96,7 @@
                 }
 
                 if (isDebug) {
-                  Console.Error..WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}");
+                  Console.Error.WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}");
                 }
 
                 Environment.SetEnvironmentVariable("CustomAotToolChain", "zig");
@@ -107,7 +107,7 @@
             }
 
             if (isDebug) {
-              Console.Error..WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment...");
+              Console.Error.WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment...");
             }
         ]]>
       </Code>
