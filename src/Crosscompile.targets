@@ -179,10 +179,9 @@
       <CppLinker>lld-link</CppLinker>
     </PropertyGroup>
 
+    <Message Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" Importance="high" Text="The xwin cache does not yet exist, building this may take a while..." />
+    <Exec Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" ContinueOnError="false" ConsoleToMsBuild="true" Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
     <ItemGroup Condition=" '$(CustomAotToolChain)' == 'xwin' ">
-      <Message Condition="!Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" Importance="high" Text="The xwin cache does not yet exist, building this may take a while..." />
-      <Exec Condition="!Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" ContinueOnError="false" ConsoleToMsBuild="true" Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
-
       <_NoExpLinkerArg Include="@(LinkerArg->Replace('/NOEXP', ''))" />
       <LinkerArg Remove="@(LinkerArg)" />
 

@@ -18,6 +18,8 @@ The xwin implemetation is based on [Windows10CE's project](https://github.com/Wi
 
 ### Typical Cross build
 
+#### Zig
+
 By default it relies on Zig provided by the unofficial [Vezel.Zig.Toolsets](https://github.com/vezel-dev/zig-toolsets) NuGet package. You can specify version of this package using the `ZigVersion` property. Instructions for using your own Zig binaries are near the end of this document.
 
 If you don't want to use Zig from the Vezel.Zig.Toolsets NuGet package, you can specify `/p:UseExternalZig=true`. This will use whatever Zig is on your PATH. [Download](https://ziglang.org/download/) an archive with Zig for your host machine, extract it and place it on your PATH.
@@ -36,6 +38,18 @@ If you don't want to use Zig from the Vezel.Zig.Toolsets NuGet package, you can 
     If you skipped the second optional step to download llvm-objcopy, you must also pass `/p:StripSymbols=false` to the publish command, or you'll see an error instructing you to do that.
 
 Even though Zig allows crosscompiling for Windows as well, it's not possible to crosscompile PublishAot like this due to ABI differences (MSVC vs. MingW ABI).
+
+#### XWin
+
+It relies on xwin and lld in system path to work.
+
+1. Install XWin and lld and make sure the executables are in path
+
+2. To your project that is already using Native AOT, add a reference to this NuGet package.
+
+3. Publish for one of the newly available RIDs:
+    * `dotnet publish -r win-x64`
+    * `dotnet publish -r win-arm64`
 
 ### Use Zig as c compiler on same host
 
