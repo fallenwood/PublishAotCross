@@ -33,14 +33,16 @@ jobs:
         run: sudo apt-get install lld
       - name: Setup xwin
         run: |
-          xwin_version="xwin-0.6.6-rc.2-x86_64-unknown-linux-musl"
-          wget https://github.com/Jake-Shadle/xwin/releases/download/0.6.6-rc.2/${xwin_version}.tar.gz
-          tar -xf ${xwin_version}.tar.gz
+          xwin_version="xwin-0.6.6-rc.2"
+          wget https://github.com/Jake-Shadle/xwin/releases/download/${xwin_version}/${xwin_version}-x86_64-unknown-linux-musl.tar.gz
+          tar -xf ${xwin_version}-x86_64-unknown-linux-musl.tar.gz
           mkdir -p $HOME/.local/bin
-          cp ${xwin_version}/xwin $HOME/.local/bin
+          cp ${xwin_version}-unknown-linux-musl/xwin $HOME/.local/bin
+          chmod +x $HOME/.local/bin/xwin
       - name: Build (CI)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
+          xwin --accept-license --cache-dir ./src/.xwin-cache --arch x86_64,aarch64 --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=false
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-linux-musl-x64

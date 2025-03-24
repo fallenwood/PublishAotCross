@@ -39,7 +39,7 @@
 
       <Code Type="Fragment" Language="cs">
         <![CDATA[
-            Console.WriteLine("Running custom toolchain environment setup for cross building...");
+            Console.Error.WriteLine("Running custom toolchain environment setup for cross building...");
 
             if (!UseExternalZig) {
               Environment.SetEnvironmentVariable("PATH", ZigPath + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
@@ -74,7 +74,6 @@
             }
 
             if (isTargetingWindows) {
-              // It's zig but xwin
               if (buildenv != RuntimeIdentifier || AotPreferCustom) {
                 // Cross-compile from *nix to Windows
                 Environment.SetEnvironmentVariable("CustomAotToolChain", "xwin");
@@ -97,7 +96,7 @@
                 }
 
                 if (isDebug) {
-                  Console.WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}");
+                  Console.Error..WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}");
                 }
 
                 Environment.SetEnvironmentVariable("CustomAotToolChain", "zig");
@@ -108,7 +107,7 @@
             }
 
             if (isDebug) {
-              Console.WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment...");
+              Console.Error..WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment...");
             }
         ]]>
       </Code>
@@ -179,8 +178,15 @@
       <CppLinker>lld-link</CppLinker>
     </PropertyGroup>
 
-    <Message Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" Importance="high" Text="The xwin cache does not yet exist, building this may take a while..." />
-    <Exec Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" ContinueOnError="false" ConsoleToMsBuild="true" Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
+    <Message
+      Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')"
+      Importance="high"
+      Text="The xwin cache does not yet exist, building this may take a while..." />
+    <Exec
+      Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')"
+      ContinueOnError="false"
+      ConsoleToMsBuild="true"
+      Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
     <ItemGroup Condition=" '$(CustomAotToolChain)' == 'xwin' ">
       <_NoExpLinkerArg Include="@(LinkerArg->Replace('/NOEXP', ''))" />
       <LinkerArg Remove="@(LinkerArg)" />
