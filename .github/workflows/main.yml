@@ -33,11 +33,11 @@ jobs:
         run: sudo apt-get install lld
       - name: Setup xwin
         run: |
-          xwin_version="xwin-0.6.6-rc.2"
-          wget https://github.com/Jake-Shadle/xwin/releases/download/${xwin_version}/${xwin_version}-x86_64-unknown-linux-musl.tar.gz
-          tar -xf ${xwin_version}-x86_64-unknown-linux-musl.tar.gz
+          xwin_version="0.6.6-rc.2"
+          wget https://github.com/Jake-Shadle/xwin/releases/download/${xwin_version}/xwin-${xwin_version}-x86_64-unknown-linux-musl.tar.gz
+          tar -xf xwin-${xwin_version}-x86_64-unknown-linux-musl.tar.gz
           mkdir -p $HOME/.local/bin
-          cp ${xwin_version}-unknown-linux-musl/xwin $HOME/.local/bin
+          cp xwin-${xwin_version}-unknown-linux-musl/xwin $HOME/.local/bin
           chmod +x $HOME/.local/bin/xwin
       - name: Build (CI)
         run: |
