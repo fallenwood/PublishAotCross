@@ -1,5 +1,6 @@
 The MIT License (MIT)
 
+Copyright (c) Fallenwood (fallenwood.y@outlook.com)
 Copyright (c) Michal Strehovsky
 
 All rights reserved.
