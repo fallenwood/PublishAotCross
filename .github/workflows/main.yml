@@ -29,12 +29,25 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
+      - name: Install lld-link
+        run: sudo apt-get install lld
+      - name: Setup xwin
+        run: |
+          xwin_version="xwin-0.6.6-rc.2-x86_64-unknown-linux-musl"
+          wget https://github.com/Jake-Shadle/xwin/releases/download/0.6.6-rc.2/${xwin_version}.tar.gz
+          tar -xf ${xwin_version}.tar.gz
+          mkdir -p $HOME/.local/bin
+          cp ${xwin_version}/xwin $HOME/.local/bin
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=false
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-linux-musl-x64
           dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=false -o output-linux-musl-arm
+          dotnet publish -r win-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-win-x64
+          dotnet publish -r win-x64 -c Release test/Hello9.csproj -p:StripSymbols=false -o output-win-x64
+          dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-win-arm64
+          dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=false -o output-win-arm64
 
   build:
     strategy:

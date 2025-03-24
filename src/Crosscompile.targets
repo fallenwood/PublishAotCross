@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <DisableUnsupportedError>true</DisableUnsupportedError>
-    <AotPreferZig>false</AotPreferZig>
+    <AotPreferCustom>false</AotPreferCustom>
     <HostRuntimeIdentifier Condition="'$(HostRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</HostRuntimeIdentifier>
     <ZigVersion Condition="'$(ZigVersion)' == ''">0.14.0.1</ZigVersion>
     <UseExternalZig Condition="'$(UseExternalZig)' == ''">false</UseExternalZig>
@@ -25,8 +25,10 @@
       <MSBuildThisFileDirectory ParameterType="System.String" Required="true" />
       <RuntimeIdentifier ParameterType="System.String" Required="true" />
       <ZigPath ParameterType="System.String" Required="true" />
-      <AotPreferZig ParameterType="System.Boolean" Required="true" />
+      <AotPreferCustom ParameterType="System.Boolean" Required="true" />
       <UseExternalZig ParameterType="System.Boolean" Required="true" />
+      <!-- Out Variables -->
+      <CustomAotToolChain ParameterType="System.String" Output="true"/>
     </ParameterGroup>
 
     <Task>
@@ -34,6 +36,7 @@
       <Using Namespace="System.IO" />
       <Using Namespace="System.Diagnostics" />
       <Using Namespace="System.Runtime.InteropServices" />
+
       <Code Type="Fragment" Language="cs">
         <![CDATA[
             Console.WriteLine("Running custom toolchain environment setup for cross building...");
@@ -43,8 +46,10 @@
             }
 
             var buildenv = "";
-            var isWindows = false;
+            var isHostWindows = false;
+            var isTargetingWindows = RuntimeIdentifier.StartsWith("win");
             var isDebug = Environment.GetEnvironmentVariable("DOTNET_FALLENWOOD_PUBLISHAOTCROSS") == bool.TrueString;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
               var osDescription = RuntimeInformation.OSDescription;
               buildenv += "linux";
@@ -57,7 +62,7 @@
               }
             } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
               buildenv += "win";
-              isWindows = true;
+              isHostWindows = true;
             }
 
             if (RuntimeInformation.OSArchitecture == Architecture.X64) {
@@ -68,21 +73,42 @@
               buildenv += "-arm";
             }
 
-            if (buildenv != RuntimeIdentifier || AotPreferZig) {
-              Environment.SetEnvironmentVariable("PATH", MSBuildThisFileDirectory + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+            if (isTargetingWindows) {
+              // It's zig but xwin
+              if (buildenv != RuntimeIdentifier || AotPreferCustom) {
+                // Cross-compile from *nix to Windows
+                Environment.SetEnvironmentVariable("CustomAotToolChain", "xwin");
+                CustomAotToolChain = "xwin";
 
-              if (!isWindows) {
-                var cmd = new Process();
-                cmd.StartInfo.FileName = "chmod";
-                cmd.StartInfo.Arguments = "-R +x " + MSBuildThisFileDirectory;
-                cmd.StartInfo.CreateNoWindow = true;
-                cmd.StartInfo.UseShellExecute = false;
-                cmd.Start();
-                cmd.WaitForExit();
+                return Success;
               }
-              if (isDebug) { Console.WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}"); }
             } else {
-              if (isDebug) { Console.WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment..."); }
+              if (buildenv != RuntimeIdentifier || AotPreferCustom) {
+                Environment.SetEnvironmentVariable("PATH", MSBuildThisFileDirectory + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+
+                if (!isHostWindows) {
+                  var cmd = new Process();
+                  cmd.StartInfo.FileName = "chmod";
+                  cmd.StartInfo.Arguments = "-R +x " + MSBuildThisFileDirectory;
+                  cmd.StartInfo.CreateNoWindow = true;
+                  cmd.StartInfo.UseShellExecute = false;
+                  cmd.Start();
+                  cmd.WaitForExit();
+                }
+
+                if (isDebug) {
+                  Console.WriteLine($"Adding {MSBuildThisFileDirectory} to PATH for cross building {RuntimeIdentifier} on {buildenv}");
+                }
+
+                Environment.SetEnvironmentVariable("CustomAotToolChain", "zig");
+                CustomAotToolChain = "zig";
+
+                return Success;
+              }
+            }
+
+            if (isDebug) {
+              Console.WriteLine($"Native building for {buildenv}, skip setting custom toolchain environment...");
             }
         ]]>
       </Code>
@@ -92,7 +118,6 @@
   <Target
     Name="SetPathToClang"
     BeforeTargets="SetupOSSpecificProps">
-
     <PropertyGroup Condition="$(HostRuntimeIdentifier.StartsWith('win-'))">
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x86'))">$(PkgVezel_Zig_Toolsets_win-x86)/tools</ZigPath>
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x64'))">$(PkgVezel_Zig_Toolsets_win-x64)/tools</ZigPath>
@@ -109,9 +134,10 @@
       MSBuildThisFileDirectory="$(MSBuildThisFileDirectory)"
       RuntimeIdentifier="$(RuntimeIdentifier)"
       ZigPath="$(ZigPath)"
-      AotPreferZig="$(AotPreferZig)"
-      UseExternalZig="$(UseExternalZig)" />
-
+      AotPreferCustom="$(AotPreferCustom)"
+      UseExternalZig="$(UseExternalZig)">
+      <Output TaskParameter="CustomAotToolChain" PropertyName="CustomAotToolChain"/>
+    </PrependPathIfCrossCompile>
   </Target>
 
   <!-- BEGIN: Works around ILCompiler targets not detecting this as a cross compilation -->
@@ -119,7 +145,7 @@
           AfterTargets="SetupOSSpecificProps"
           BeforeTargets="LinkNative">
 
-    <PropertyGroup>
+    <PropertyGroup Condition=" '$(CustomAotToolChain)' == 'zig' ">
       <CrossCompileRid />
       <CrossCompileRid>$(RuntimeIdentifier)</CrossCompileRid>
 
@@ -134,8 +160,37 @@
       <TargetTriple Condition="'$(CrossCompileArch)' == 'arm' and $(CrossCompileRid.StartsWith('linux-musl'))">thumb-linux-musleabihf</TargetTriple>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition=" '$(CustomAotToolChain)' == 'zig' ">
       <LinkerArg Include="--target=$(TargetTriple)" />
+    </ItemGroup>
+
+    <PropertyGroup Condition=" '$(CustomAotToolChain)' == 'xwin' ">
+      <CrossCompileRid />
+      <CrossCompileRid>$(RuntimeIdentifier)</CrossCompileRid>
+
+      <CrossCompileArch />
+      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x64'))">x64</CrossCompileArch>
+      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x86'))">x86</CrossCompileArch>
+      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">arm64</CrossCompileArch>
+      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm'))">arm</CrossCompileArch>
+
+      <XwinArches Condition="'$(XwinArches)' == ''">x86_64,aarch64</XwinArches>
+
+      <CppLinker>lld-link</CppLinker>
+    </PropertyGroup>
+
+    <ItemGroup Condition=" '$(CustomAotToolChain)' == 'xwin' ">
+      <Message Condition="!Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" Importance="high" Text="The xwin cache does not yet exist, building this may take a while..." />
+      <Exec Condition="!Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')" ContinueOnError="false" ConsoleToMsBuild="true" Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
+
+      <_NoExpLinkerArg Include="@(LinkerArg->Replace('/NOEXP', ''))" />
+      <LinkerArg Remove="@(LinkerArg)" />
+
+      <LinkerArg Include="/vctoolsdir:$(MSBuildThisFileDirectory).xwin-cache/splat/crt" />
+      <LinkerArg Include="/winsdkdir:$(MSBuildThisFileDirectory).xwin-cache/splat/sdk" />
+      <LinkerArg Include="/LIBPATH:$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)/" />
+
+      <LinkerArg Include="@(_NoExpLinkerArg)" />
     </ItemGroup>
 
   </Target>
