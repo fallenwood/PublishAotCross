@@ -31,6 +31,11 @@ jobs:
           dotnet-version: '9.0.x'
       - name: Install lld-link
         run: sudo apt-get install --no-install-suggests --no-install-recommends lld llvm
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Setup xwin
         run: |
           xwin_version="0.6.6-rc.2"
@@ -70,7 +75,7 @@ jobs:
         with:
           version: "0.15.1"
 
-      - name: Script
+      - name: Download llvm-objcopy
         run: ./src/download-llvm-objcopy.ps1
         shell: pwsh
 
@@ -122,7 +127,7 @@ jobs:
         with:
           tag: "latest"
 
-      - name: Script
+      - name: Download llvm-objcopy
         run: ./src/download-llvm-objcopy.ps1
         shell: pwsh
 
