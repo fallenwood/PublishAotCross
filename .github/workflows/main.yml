@@ -69,6 +69,11 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: "0.15.1"
+
+      - name: Script
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
@@ -112,6 +117,15 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
+
+      - uses: milliewalky/setup-7-zip@v2
+        with:
+          tag: "latest"
+
+      - name: Script
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Build (CD)
         if: ${{ github.event.inputs.version != '' }}
         run: dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}
