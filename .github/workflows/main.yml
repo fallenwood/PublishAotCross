@@ -104,7 +104,7 @@ jobs:
           ./Hello
 
   release:
-    needs: validate
+    needs: [validate, build_multihost]
     runs-on: ubuntu-latest
     name: Release
     steps:
