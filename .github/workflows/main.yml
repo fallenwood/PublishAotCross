@@ -30,7 +30,7 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - name: Install lld-link
-        run: sudo apt-get install lld
+        run: sudo apt-get install --no-install-suggests --no-install-recommends lld llvm
       - name: Setup xwin
         run: |
           xwin_version="0.6.6-rc.2"
