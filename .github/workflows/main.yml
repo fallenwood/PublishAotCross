@@ -43,13 +43,13 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
-          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=false
-          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-linux-musl-x64
-          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=false -o output-linux-musl-arm
-          dotnet publish -r win-x64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-win-x64
-          dotnet publish -r win-x64 -c Release test/Hello9.csproj -p:StripSymbols=false -o output-win-x64
-          dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=false -o output-win-arm64
-          dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=false -o output-win-arm64
+          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
+          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
+          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
+          dotnet publish -r win-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-x64
+          dotnet publish -r win-x64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-x64
+          dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-arm64
+          dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-arm64
 
   build:
     strategy:
@@ -65,12 +65,14 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '8.0.x'
-      - name: Setup zig
-        uses: goto-bus-stop/setup-zig@v2
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "0.15.1"
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
-          dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=false -p:UseExternalZig=true
+          dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=true -p:UseExternalZig=true
       - name: Upload test binary
         uses: actions/upload-artifact@v4
         with:
