@@ -42,5 +42,9 @@
       <Pack>true</Pack>
       <PackagePath>build</PackagePath>
     </None>
+    <None Include="objcopy.cmd">
+      <Pack>true</Pack>
+      <PackagePath>build</PackagePath>
+    </None>
   </ItemGroup>
 </Project>
