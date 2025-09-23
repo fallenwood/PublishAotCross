@@ -86,6 +86,36 @@ jobs:
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
           dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
 
+  build_multitarget_macos:
+    strategy:
+      matrix:
+        include:
+          - vm: macos-latest
+    runs-on: ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup dotnet 8.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup dotnet 9.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
+      - name: Build (CI)
+        run: |
+          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
+          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
+          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
+          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
+
   build:
     strategy:
       matrix:
@@ -134,7 +164,7 @@ jobs:
           ./Hello
 
   release:
-    needs: [validate, build_multitarget_linux, build_multitarget_windows]
+    needs: [validate, build_multitarget_linux, build_multitarget_windows, build_multitarget_macos]
     runs-on: ubuntu-latest
     name: Release
     steps:
