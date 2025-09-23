@@ -109,6 +109,11 @@ jobs:
         run: ./src/download-llvm-objcopy.ps1
         shell: pwsh
 
+      - name: Install LLVM
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "20.1.0"
+
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
