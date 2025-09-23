@@ -17,7 +17,7 @@ jobs:
         include:
           - vm: ubuntu-24.04
     runs-on: ${{ matrix.vm }}
-    name: Build and test ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -62,7 +62,7 @@ jobs:
         include:
           - vm: windows-latest
     runs-on: ${{ matrix.vm }}
-    name: Build and test ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -92,7 +92,7 @@ jobs:
         include:
           - vm: windows-latest
     runs-on: ${{ matrix.vm }}
-    name: Build and release ${{ matrix.vm }}
+    name: Build and Validate ${{ matrix.vm }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
