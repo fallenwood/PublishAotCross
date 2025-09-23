@@ -61,14 +61,16 @@ dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferCustom=true
 
 ## Tested Variants
 
-|                    |(Host)Windows x64|Linux GNU x64|Linux GNU arm64|Linux MUSL x64|Linux MUSL arm64|
-|--------------------|-----------------|-------------|---------------|--------------|----------------|
-|(target)Windows x64 |N/A              |O            |N/A            |N/A           |N/A             |
-|Linux GNU x64       |O                |O            |O              |N/A           |N/A             |
-|Linux GNU arm64     |O                |O            |O              |N/A           |N/A             |
-|Linux MUSL x64      |O                |O            |O              |N/A           |N/A             |
-|Linux MUSL arm64    |O                |O            |O              |N/A           |N/A             |
-|Linux MUSL arm      |N/A              |O            |N/A            |N/A           |N/A             |
+|                    |(Host)Windows x64|Linux GNU x64|Linux GNU arm64|Linux MUSL x64|Linux MUSL arm64| macOS x64 | macOS arm64 |
+|--------------------|-----------------|-------------|---------------|--------------|----------------|-----------|-------------|
+|(target)Windows x64 |N/A              |O            |N/A            |N/A           |N/A             |N/A        |N/A          |
+|Linux GNU x64       |O                |O            |O              |N/A           |N/A             |O          |N/A          |
+|Linux GNU arm64     |O                |O            |O              |N/A           |N/A             |O          |N/A          |
+|Linux MUSL x64      |O                |O            |O              |N/A           |N/A             |O          |N/A          |
+|Linux MUSL arm64    |O                |O            |O              |N/A           |N/A             |O          |N/A          |
+|Linux MUSL arm      |N/A              |O            |N/A            |N/A           |N/A             |O          |N/A          |
+|macOS x64           |X                |X            |X              |X             |X               |N/A        |X            |
+|macOS arm64         |X                |X            |X              |X             |X               |X          |N/A          |
 
 Notes: `N/A` means it's might work but not tested.
 
