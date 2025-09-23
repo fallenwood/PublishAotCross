@@ -81,7 +81,6 @@ jobs:
 
       - name: Build (CI)
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
@@ -93,7 +92,7 @@ jobs:
         include:
           - vm: windows-latest
     runs-on: ${{ matrix.vm }}
-    name: Build and test ${{ matrix.vm }}
+    name: Build and release ${{ matrix.vm }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
