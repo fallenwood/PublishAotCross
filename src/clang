@@ -28,4 +28,4 @@ args="${arr[*]}"
 
 
 # Run zig cc
-zig cc ${arr[@]}
+zig cc "${arr[@]}"
