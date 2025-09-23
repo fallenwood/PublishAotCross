@@ -116,6 +116,7 @@ jobs:
 
       - name: Build (CI)
         run: |
+          export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
