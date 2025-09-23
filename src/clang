@@ -10,23 +10,22 @@ fi
 args="$*"
 
 # Works around zlib not being available with zig. This is not great.
-args=$(echo "$args" | sed 's/-lz //g')
+args=${args//-lz /}
 
 # Work around a .NET 8 Preview 6 issue
-args=${args//'-Wl,-rpath,$ORIGIN'/-Wl,-rpath,\$ORIGIN}
-
+args=${args//-Wl,-rpath,\$ORIGIN/-Wl,-rpath,\$ORIGIN}
 
 # Work around parameters unsupported by zig. Just drop them from the command line.
 args=${args//--discard-all/--as-needed}
-args=$(echo "$args" | sed 's/-Wl,-pie //g')
-args=$(echo "$args" | sed 's/-pie //g')
-args=$(echo "$args" | sed 's/-Wl,-e0x0 //g')
+args=${args//-Wl,-pie /}
+args=${args//-pie /}
+args=${args//-Wl,-e0x0 /}
 
 # Works around zig linker dropping necessary parts of the executable.
-arr=($args)
+read -ra arr <<< "$args"
 arr=("${arr[@]:0:3}" "-Wl,-u,__Module" "${arr[@]:3}")
-args="${arr[@]}"
+args="${arr[*]}"
 
 
 # Run zig cc
-zig cc ${args}
+zig cc ${arr[@]}
