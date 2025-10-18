@@ -29,6 +29,11 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
+      - name: Setup dotnet 10.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: true
       - name: Install lld-link
         run: sudo apt-get install --no-install-suggests --no-install-recommends lld llvm
 
@@ -51,10 +56,13 @@ jobs:
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
           dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
+          dotnet publish -r linux-musl-arm -c Release test/Hello10.csproj -p:StripSymbols=true -o output-linux-musl-arm
           dotnet publish -r win-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-x64
           dotnet publish -r win-x64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-x64
+          dotnet publish -r win-x64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-x64
           dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-arm64
           dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-arm64
+          dotnet publish -r win-arm64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-arm64
 
   build_multitarget_windows:
     strategy:

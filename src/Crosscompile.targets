@@ -123,6 +123,7 @@
       Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
     <ItemGroup Condition=" '$(CustomAotToolChain)' == 'xwin' ">
       <_NoExpLinkerArg Include="@(LinkerArg->Replace('/NOEXP', ''))" />
+      <_NoExpLinkerArg Remove="@(_NoExpLinkerArg)" Condition="$([System.String]::new('%(Identity)').StartsWith('/SOURCELINK:'))" />
       <LinkerArg Remove="@(LinkerArg)" />
 
       <LinkerArg Include="/vctoolsdir:$(MSBuildThisFileDirectory).xwin-cache/splat/crt" />
