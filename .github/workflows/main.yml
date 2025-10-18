@@ -33,6 +33,7 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '10.0.x'
+          include-prerelease: true
       - name: Install lld-link
         run: sudo apt-get install --no-install-suggests --no-install-recommends lld llvm
 
