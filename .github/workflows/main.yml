@@ -147,7 +147,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: "0.15.1"
+          version: "0.16.0"
 
       - name: Download llvm-objcopy
         run: ./src/download-llvm-objcopy.ps1
@@ -188,14 +188,10 @@ jobs:
         uses: NuGet/setup-nuget@v2
         with:
           nuget-version: latest
-      - name: Setup dotnet 8.0
+      - name: Setup dotnet 10.0
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '8.0.x'
-      - name: Setup dotnet 9.0
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - uses: milliewalky/setup-7-zip@v2
         with:

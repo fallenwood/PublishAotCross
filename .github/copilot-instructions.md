@@ -14,6 +14,7 @@ PublishAotCross is a NuGet package with MSBuild targets that helps resolve cross
 ```bash
 dotnet build test/Hello.csproj
 dotnet build test/Hello9.csproj
+dotnet build test/Hello10.csproj
 ```
 
 ### Testing Cross-Compilation
@@ -27,7 +28,7 @@ dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferCustom=true /p:UseExt
 
 ### Required Before Each Commit
 - Ensure code builds successfully with both test projects
-- Run cross-compilation tests if making changes to core functionality  
+- Run cross-compilation tests if making changes to core functionality
 - Follow the established code formatting and style conventions
 - Verify MSBuild targets work correctly
 - Test shell scripts (`src/gcc`, `src/clang`) if modified
@@ -43,6 +44,7 @@ dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferCustom=true /p:UseExt
 - **`test/`** - Test projects
   - `Hello.csproj` - .NET 8.0 test project
   - `Hello9.csproj` - .NET 9.0 test project
+  - `Hello10.csproj` - .NET 10.0 test project
   - `Program.cs` - Simple Hello World test program
 
 ## Code Standards and Guidelines
