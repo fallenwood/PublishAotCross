@@ -46,5 +46,13 @@
       <Pack>true</Pack>
       <PackagePath>build</PackagePath>
     </None>
+    <None Include="llvm-objcopy.exe">
+      <Pack>true</Pack>
+      <PackagePath>build</PackagePath>
+    </None>
+    <None Include="Scripts/SetPath.cs">
+      <Pack>true</Pack>
+      <PackagePath>build/Scripts/SetPath.cs</PackagePath>
+    </None>
   </ItemGroup>
 </Project>

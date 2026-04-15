@@ -1,3 +1,4 @@
 **/bin
 **/obj
 **/.xwin-cache
+src/*.exe

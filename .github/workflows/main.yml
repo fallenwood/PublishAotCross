@@ -11,13 +11,13 @@ on:
         required: false
 
 jobs:
-  build_multihost:
+  build_multitarget_linux:
     strategy:
       matrix:
         include:
           - vm: ubuntu-24.04
     runs-on: ${{ matrix.vm }}
-    name: Build and test ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -29,8 +29,18 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
+      - name: Setup dotnet 10.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: true
       - name: Install lld-link
-        run: sudo apt-get install lld
+        run: sudo apt-get install --no-install-suggests --no-install-recommends lld llvm
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Setup xwin
         run: |
           xwin_version="0.6.6-rc.2"
@@ -46,10 +56,79 @@ jobs:
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
           dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
+          dotnet publish -r linux-musl-arm -c Release test/Hello10.csproj -p:StripSymbols=true -o output-linux-musl-arm
           dotnet publish -r win-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-x64
           dotnet publish -r win-x64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-x64
+          dotnet publish -r win-x64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-x64
           dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-arm64
           dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-arm64
+          dotnet publish -r win-arm64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-arm64
+
+  build_multitarget_windows:
+    strategy:
+      matrix:
+        include:
+          - vm: windows-latest
+    runs-on: ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup dotnet 8.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup dotnet 9.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
+      - name: Build (CI)
+        run: |
+          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
+          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
+          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
+          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
+
+  #build_multitarget_macos:
+  #  strategy:
+  #    matrix:
+  #      include:
+  #        - vm: macos-latest
+  #  runs-on: ${{ matrix.vm }}
+  #  name: Build Multi Target ${{ matrix.vm }}
+  #  steps:
+  #    - name: Checkout repo
+  #      uses: actions/checkout@v3
+  #    - name: Setup dotnet 8.0
+  #      uses: actions/setup-dotnet@v2
+  #      with:
+  #        dotnet-version: '8.0.x'
+  #    - name: Setup dotnet 9.0
+  #      uses: actions/setup-dotnet@v2
+  #      with:
+  #        dotnet-version: '9.0.x'
+  #
+  #    - name: Download llvm-objcopy
+  #      run: ./src/download-llvm-objcopy.ps1
+  #      shell: pwsh
+  #
+  #    - name: Install LLVM
+  #      uses: KyleMayes/install-llvm-action@v2
+  #      with:
+  #        version: "20.1.0"
+  #
+  #    - name: Build (CI)
+  #      run: |
+  #        export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+  #        dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
+  #        dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
+  #        dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
+  #        dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
 
   build:
     strategy:
@@ -57,7 +136,7 @@ jobs:
         include:
           - vm: windows-latest
     runs-on: ${{ matrix.vm }}
-    name: Build and test ${{ matrix.vm }}
+    name: Build and Validate ${{ matrix.vm }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -68,7 +147,12 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: "0.15.1"
+          version: "0.16.0"
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
@@ -94,7 +178,7 @@ jobs:
           ./Hello
 
   release:
-    needs: validate
+    needs: [validate, build_multitarget_linux, build_multitarget_windows]
     runs-on: ubuntu-latest
     name: Release
     steps:
@@ -104,14 +188,19 @@ jobs:
         uses: NuGet/setup-nuget@v2
         with:
           nuget-version: latest
-      - name: Setup dotnet 8.0
+      - name: Setup dotnet 10.0
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '8.0.x'
-      - name: Setup dotnet 9.0
-        uses: actions/setup-dotnet@v2
+          dotnet-version: '10.0.x'
+
+      - uses: milliewalky/setup-7-zip@v2
         with:
-          dotnet-version: '9.0.x'
+          tag: "latest"
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Build (CD)
         if: ${{ github.event.inputs.version != '' }}
         run: dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}

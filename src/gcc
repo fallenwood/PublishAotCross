@@ -3,7 +3,7 @@
 set -x
 
 if ! command -v zig > /dev/null; then
-  echo "Error: zig is not on the PATH. Install zig and make sure it's on PATH. Follow instructions at https://github.com/MichalStrehovsky/PublishAotCross"
+  echo "Error: zig is not on the PATH. Install zig and make sure it's on PATH. Follow instructions at https://github.com/fallenwood/PublishAotCross"
   exit 1
 fi
 
