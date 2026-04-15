@@ -37,10 +37,6 @@ jobs:
       - name: Install lld-link
         run: sudo apt-get install --no-install-suggests --no-install-recommends lld llvm
 
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
-
       - name: Setup xwin
         run: |
           xwin_version="0.6.6-rc.2"
@@ -82,10 +78,6 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '9.0.x'
-
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
 
       - name: Build (CI)
         run: |
@@ -149,10 +141,6 @@ jobs:
         with:
           version: "0.16.0"
 
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
-
       - name: Build (CI)
         run: |
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
@@ -196,10 +184,6 @@ jobs:
       - uses: milliewalky/setup-7-zip@v2
         with:
           tag: "latest"
-
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
 
       - name: Build (CD)
         if: ${{ github.event.inputs.version != '' }}
