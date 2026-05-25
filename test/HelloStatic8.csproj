@@ -6,6 +6,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <PublishAot>true</PublishAot>
     <StaticExecutable>true</StaticExecutable>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
