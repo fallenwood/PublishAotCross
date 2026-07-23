@@ -22,6 +22,8 @@ if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
 } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
   buildenv += "win";
   isHostWindows = true;
+} else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+  buildenv += "osx";
 }
 
 if (RuntimeInformation.OSArchitecture == Architecture.X64) {
@@ -35,6 +37,15 @@ if (RuntimeInformation.OSArchitecture == Architecture.X64) {
 if (isTargetingWindows) {
   if (!isHostWindows && (buildenv != RuntimeIdentifier || AotPreferCustom)) {
     // Cross-compile from *nix to Windows
+    Environment.SetEnvironmentVariable("CustomAotToolChain", "xwin");
+    CustomAotToolChain = "xwin";
+
+    return Success;
+  }
+
+  // Only supported on win-x64 host
+  if (buildenv == "win-x64" && AotPreferCustom) {
+    // Use xwin toolchain for Windows native compilation instead of VS C++ tools
     Environment.SetEnvironmentVariable("CustomAotToolChain", "xwin");
     CustomAotToolChain = "xwin";
 

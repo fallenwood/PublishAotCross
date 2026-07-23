@@ -1,21 +1,14 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <Import Project="$(MSBuildThisFileDirectory)ZigVersion.props" Condition="'$(ZigVersion)' == ''" />
+
   <PropertyGroup>
     <DisableUnsupportedError>true</DisableUnsupportedError>
-    <AotPreferCustom>false</AotPreferCustom>
+    <AotPreferCustom>true</AotPreferCustom>
     <HostRuntimeIdentifier Condition="'$(HostRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</HostRuntimeIdentifier>
-    <ZigVersion Condition="'$(ZigVersion)' == ''">0.16.0.2</ZigVersion>
     <UseExternalZig Condition="'$(UseExternalZig)' == ''">false</UseExternalZig>
+    <GlibcVersion Condition="'$(GlibcVersion)' == ''" />
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Vezel.Zig.Toolsets.$(HostRuntimeIdentifier)"
-      Version="$(ZigVersion)"
-      PrivateAssets="all"
-      IsImplicitlyDefined="true"
-      GeneratePathProperty="true"
-      Condition="'$(UseExternalZig)' == 'false'" />
-  </ItemGroup>
 
   <UsingTask TaskName="PrependPathIfCrossCompile"
              TaskFactory="RoslynCodeTaskFactory"
@@ -46,13 +39,11 @@
     Name="SetPathToClang"
     BeforeTargets="SetupOSSpecificProps">
     <PropertyGroup Condition="$(HostRuntimeIdentifier.StartsWith('win-'))">
-      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x86'))">$(PkgVezel_Zig_Toolsets_win-x86)/tools</ZigPath>
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x64'))">$(PkgVezel_Zig_Toolsets_win-x64)/tools</ZigPath>
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-arm64'))">$(PkgVezel_Zig_Toolsets_win-arm64)/tools</ZigPath>
     </PropertyGroup>
 
     <PropertyGroup Condition="$(HostRuntimeIdentifier.StartsWith('linux-'))">
-      <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x86'))">$(PkgVezel_Zig_Toolsets_linux-x86)/tools</ZigPath>
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-x64'))">$(PkgVezel_Zig_Toolsets_linux-x64)/tools</ZigPath>
       <ZigPath Condition="$(HostRuntimeIdentifier.EndsWith('-arm64'))">$(PkgVezel_Zig_Toolsets_linux-arm64)/tools</ZigPath>
     </PropertyGroup>
@@ -70,6 +61,10 @@
       UseExternalZig="$(UseExternalZig)">
       <Output TaskParameter="CustomAotToolChain" PropertyName="CustomAotToolChain"/>
     </PrependPathIfCrossCompile>
+
+    <PropertyGroup Condition="'$(CustomAotToolChain)' == 'xwin' and $(RuntimeIdentifier.StartsWith('win'))">
+      <IlcUseEnvironmentalTools>true</IlcUseEnvironmentalTools>
+    </PropertyGroup>
   </Target>
 
   <!-- BEGIN: Works around ILCompiler targets not detecting this as a cross compilation -->
@@ -84,12 +79,12 @@
       <CrossCompileArch />
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x64'))">x86_64</CrossCompileArch>
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">aarch64</CrossCompileArch>
-      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm'))">arm</CrossCompileArch>
+
+      <GlibcSuffix Condition="'$(GlibcVersion)' != ''">.$(GlibcVersion)</GlibcSuffix>
 
       <TargetTriple />
-      <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('linux'))">$(CrossCompileArch)-linux-gnu</TargetTriple>
+      <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('linux'))">$(CrossCompileArch)-linux-gnu$(GlibcSuffix)</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and ($(CrossCompileRid.StartsWith('linux-musl')) or $(CrossCompileRid.StartsWith('alpine')))">$(CrossCompileArch)-linux-musl</TargetTriple>
-      <TargetTriple Condition="'$(CrossCompileArch)' == 'arm' and $(CrossCompileRid.StartsWith('linux-musl'))">thumb-linux-musleabihf</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('osx'))">$(CrossCompileArch)-macos</TargetTriple>
     </PropertyGroup>
 
@@ -103,32 +98,36 @@
 
       <CrossCompileArch />
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x64'))">x64</CrossCompileArch>
-      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x86'))">x86</CrossCompileArch>
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">arm64</CrossCompileArch>
-      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm'))">arm</CrossCompileArch>
 
       <XwinArches Condition="'$(XwinArches)' == ''">x86_64,aarch64</XwinArches>
 
-      <CppLinker>lld-link</CppLinker>
+      <CppLinker Condition="'$(HostRuntimeIdentifier)' == 'win-x64'">$(LLDLinkToolsetsWinX64Dir)lld-link.exe</CppLinker>
+      <CppLinker Condition="'$(HostRuntimeIdentifier)' == 'win-arm64'">$(LLDLinkToolsetsWinArm64Dir)lld-link.exe</CppLinker>
+      <CppLinker Condition="'$(HostRuntimeIdentifier)' == 'linux-x64'">$(LLDLinkToolsetsLinuxX64Dir)lld-link</CppLinker>
+      <CppLinker Condition="'$(HostRuntimeIdentifier)' == 'linux-arm64'">$(LLDLinkToolsetsLinuxArm64Dir)lld-link</CppLinker>
+      <CppLinker Condition="'$(HostRuntimeIdentifier)' == 'osx-arm64'">$(LLDLinkToolsetsOsxArm64Dir)lld-link</CppLinker>
+      <CppLinker Condition="'$(CppLinker)' == ''">lld-link</CppLinker>
+      <IlcUseEnvironmentalTools Condition="$(HostRuntimeIdentifier.StartsWith('win'))">true</IlcUseEnvironmentalTools>
+
+      <_XWinStore Condition="'$(CrossCompileArch)' == 'arm64'">$(XWinStoreArm64Dir)</_XWinStore>
+      <_XWinStore Condition="'$(CrossCompileArch)' != 'arm64'">$(XWinStoreX64Dir)</_XWinStore>
     </PropertyGroup>
 
-    <Message
-      Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')"
-      Importance="high"
-      Text="The xwin cache does not yet exist, building this may take a while..." />
-    <Exec
-      Condition="'$(CustomAotToolChain)' == 'xwin' and !Exists('$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)')"
-      ContinueOnError="false"
-      ConsoleToMsBuild="true"
-      Command="xwin --accept-license --cache-dir &quot;$(MSBuildThisFileDirectory).xwin-cache&quot; --arch $(XwinArches) --sdk-version 10.0.22621 splat --preserve-ms-arch-notation --include-debug-symbols" />
+    <PropertyGroup Condition="'$(CustomAotToolChain)' == 'xwin' and '$(_XWinStore)' == ''">
+      <CustomAotToolChain />
+    </PropertyGroup>
+
     <ItemGroup Condition=" '$(CustomAotToolChain)' == 'xwin' ">
       <_NoExpLinkerArg Include="@(LinkerArg->Replace('/NOEXP', ''))" />
       <_NoExpLinkerArg Remove="@(_NoExpLinkerArg)" Condition="$([System.String]::new('%(Identity)').StartsWith('/SOURCELINK:'))" />
       <LinkerArg Remove="@(LinkerArg)" />
 
-      <LinkerArg Include="/vctoolsdir:$(MSBuildThisFileDirectory).xwin-cache/splat/crt" />
-      <LinkerArg Include="/winsdkdir:$(MSBuildThisFileDirectory).xwin-cache/splat/sdk" />
-      <LinkerArg Include="/LIBPATH:$(MSBuildThisFileDirectory).xwin-cache/splat/sdk/lib/ucrt/$(CrossCompileArch)/" />
+      <LinkerArg Include="/vctoolsdir:$(_XWinStore)/splat/crt" />
+      <LinkerArg Include="/winsdkdir:$(_XWinStore)/splat/sdk" />
+      <LinkerArg Include="/LIBPATH:$(_XWinStore)/splat/sdk/lib/ucrt/$(CrossCompileArch)/" />
+      <LinkerArg Include="/LIBPATH:$(_XWinStore)/splat/sdk/lib/um/$(CrossCompileArch)/" />
+      <LinkerArg Include="/LIBPATH:$(_XWinStore)/splat/crt/lib/$(CrossCompileArch)/" />
 
       <LinkerArg Include="@(_NoExpLinkerArg)" />
     </ItemGroup>

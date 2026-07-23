@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Import Project="$(MSBuildThisFileDirectory)ZigVersion.props" Condition="Exists('$(MSBuildThisFileDirectory)ZigVersion.props')" />
+
+  <PropertyGroup>
+    <HostRuntimeIdentifier Condition="'$(HostRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</HostRuntimeIdentifier>
+    <UseExternalZig Condition="'$(UseExternalZig)' == ''">false</UseExternalZig>
+    <GlibcVersion Condition="'$(GlibcVersion)' == ''" />
+  </PropertyGroup>
+
+</Project>
