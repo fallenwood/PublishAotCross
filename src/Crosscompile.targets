@@ -1,10 +1,10 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <Import Project="$(MSBuildThisFileDirectory)ZigVersion.props" Condition="'$(ZigVersion)' == ''" />
+  <Import Project="$(MSBuildThisFileDirectory)ToolsetsVersion.props" Condition="'$(ZigVersion)' == ''" />
 
   <PropertyGroup>
     <DisableUnsupportedError>true</DisableUnsupportedError>
-    <AotPreferCustom>true</AotPreferCustom>
+    <AotPreferCustom Condition="'$(AotPreferCustom)' == ''">false</AotPreferCustom>
     <HostRuntimeIdentifier Condition="'$(HostRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</HostRuntimeIdentifier>
     <UseExternalZig Condition="'$(UseExternalZig)' == ''">false</UseExternalZig>
     <GlibcVersion Condition="'$(GlibcVersion)' == ''" />
@@ -79,12 +79,14 @@
       <CrossCompileArch />
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x64'))">x86_64</CrossCompileArch>
       <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">aarch64</CrossCompileArch>
+      <CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm'))">arm</CrossCompileArch>
 
       <GlibcSuffix Condition="'$(GlibcVersion)' != ''">.$(GlibcVersion)</GlibcSuffix>
 
       <TargetTriple />
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('linux'))">$(CrossCompileArch)-linux-gnu$(GlibcSuffix)</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and ($(CrossCompileRid.StartsWith('linux-musl')) or $(CrossCompileRid.StartsWith('alpine')))">$(CrossCompileArch)-linux-musl</TargetTriple>
+      <TargetTriple Condition="'$(CrossCompileArch)' == 'arm' and $(CrossCompileRid.StartsWith('linux-musl'))">thumb-linux-musleabihf</TargetTriple>
       <TargetTriple Condition="'$(CrossCompileArch)' != '' and $(CrossCompileRid.StartsWith('osx'))">$(CrossCompileArch)-macos</TargetTriple>
     </PropertyGroup>
 
