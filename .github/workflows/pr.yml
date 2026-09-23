@@ -1,15 +1,8 @@
-name: CI
+name: PR
 
 on:
-  push:
+  pull_request:
     branches: [ master ]
-    tags: [ "*" ]
-
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version to create'
-        required: false
 
 jobs:
   build_multitarget_linux:
@@ -161,37 +154,3 @@ jobs:
         run: |
           chmod +x ./Hello
           ./Hello
-
-  release:
-    needs: [validate, build_multitarget_linux, build_multitarget_windows]
-    runs-on: ubuntu-latest
-    name: Release
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
-        with:
-          nuget-version: latest
-      - name: Setup dotnet 10.0
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: '10.0.x'
-
-      - uses: milliewalky/setup-7-zip@v2
-        with:
-          tag: "latest"
-
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
-
-      - name: Build (CD)
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}
-      - name: Push to GitHub package registry
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet nuget push src/bin/Release/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
-      - name: Push to NuGet.org
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet nuget push src/bin/Release/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
