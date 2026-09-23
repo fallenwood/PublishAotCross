@@ -57,6 +57,7 @@ jobs:
       - name: Build (CI)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
+          pwsh ./nuget_pack.ps1
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
@@ -69,7 +70,6 @@ jobs:
           dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-arm64
           dotnet publish -r win-arm64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-arm64
 
-          pwsh ./nuget_pack.ps1
           dotnet publish -r linux-x64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-x64
           dotnet publish -r linux-arm64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-arm64
 
@@ -103,6 +103,7 @@ jobs:
 
       - name: Build (CI)
         run: |
+          pwsh ./nuget_pack.ps1
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
           dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
@@ -111,7 +112,6 @@ jobs:
           dotnet publish -r linux-musl-x64 -c Release test/HelloStatic8.csproj -p:StripSymbols=true -o output-linux-musl-x64
           dotnet publish -r linux-musl-x64 -c Release test/HelloStatic10.csproj -p:StripSymbols=true -o output-linux-musl-x64
 
-          pwsh ./nuget_pack.ps1
           dotnet publish -r linux-x64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-x64
           dotnet publish -r linux-arm64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-arm64
 
@@ -140,6 +140,7 @@ jobs:
 
       - name: Build (CI)
         run: |
+          pwsh ./nuget_pack.ps1
           dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
           dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=true -p:UseExternalZig=true
       - name: Upload test binary
