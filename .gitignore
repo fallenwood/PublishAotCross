@@ -2,3 +2,8 @@
 **/obj
 **/.xwin-cache
 src/*.exe
+**.csproj.user
+.vs/**
+**.pubxml
+**.pubxml.user
+artifacts/**

@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <ZigVersion Condition="'$(ZigVersion)' == ''">0.16.0.2</ZigVersion>
+    <XWinVersion Condition="'$(XWinVersion)' == ''">0.9.0</XWinVersion>
+    <LLDVersion Condition="'$(LLDVersion)' == ''">22.1.8</LLDVersion>
+    <Revision Condition="'$(Revision)' == ''">5</Revision>
+  </PropertyGroup>
+</Project>

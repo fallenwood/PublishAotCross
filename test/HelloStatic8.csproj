@@ -12,4 +12,8 @@
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
   <Import Project="../src/Fallenwood.PublishAotCross.targets" />
+
+  <ItemGroup>
+    <PackageReference Include="Vezel.Zig.Toolsets.$(HostRuntimeIdentifier)" Version="$(ZigVersion)" PrivateAssets="all" GeneratePathProperty="true" />
+  </ItemGroup>
 </Project>
