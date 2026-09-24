@@ -1,6 +1,6 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <Import Project="$(MSBuildThisFileDirectory)ZigVersion.props" Condition="Exists('$(MSBuildThisFileDirectory)ZigVersion.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)ToolsetsVersion.props" />
 
   <PropertyGroup>
     <HostRuntimeIdentifier Condition="'$(HostRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</HostRuntimeIdentifier>

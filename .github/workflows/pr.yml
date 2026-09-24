@@ -1,15 +1,8 @@
-name: CI
+name: PR
 
 on:
-  push:
+  pull_request:
     branches: [ master ]
-    tags: [ "*" ]
-
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version to create'
-        required: false
 
 jobs:
   build_multitarget_linux:
@@ -42,14 +35,14 @@ jobs:
       - name: Install llvm
         run: sudo apt-get install --no-install-suggests --no-install-recommends llvm
 
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
           version: "0.16.0"
-
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
 
       - name: Setup xwin
         run: |
@@ -74,7 +67,6 @@ jobs:
           dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-arm64
           dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-arm64
           dotnet publish -r win-arm64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-arm64
-
           dotnet publish -r linux-x64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-x64
           dotnet publish -r linux-arm64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-arm64
 
@@ -116,7 +108,6 @@ jobs:
           dotnet publish -r linux-musl-x64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-linux-musl-x64
           dotnet publish -r linux-musl-x64 -c Release test/HelloStatic8.csproj -p:StripSymbols=true -o output-linux-musl-x64
           dotnet publish -r linux-musl-x64 -c Release test/HelloStatic10.csproj -p:StripSymbols=true -o output-linux-musl-x64
-
           dotnet publish -r linux-x64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-x64
           dotnet publish -r linux-arm64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-arm64
 
@@ -167,37 +158,3 @@ jobs:
         run: |
           chmod +x ./Hello
           ./Hello
-
-  release:
-    needs: [validate, build_multitarget_linux, build_multitarget_windows]
-    runs-on: ubuntu-latest
-    name: Release
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
-        with:
-          nuget-version: latest
-      - name: Setup dotnet 10.0
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: '10.0.x'
-
-      - uses: milliewalky/setup-7-zip@v2
-        with:
-          tag: "latest"
-
-      - name: Download llvm-objcopy
-        run: ./src/download-llvm-objcopy.ps1
-        shell: pwsh
-
-      - name: Build (CD)
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj -p:Version=${{ github.event.inputs.version }}
-      - name: Push to GitHub package registry
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet nuget push src/bin/Release/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
-      - name: Push to NuGet.org
-        if: ${{ github.event.inputs.version != '' }}
-        run: dotnet nuget push src/bin/Release/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
