@@ -39,6 +39,11 @@ jobs:
         run: ./src/download-llvm-objcopy.ps1
         shell: pwsh
 
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "0.16.0"
+
       - name: Setup xwin
         run: |
           xwin_version="0.9.0"
