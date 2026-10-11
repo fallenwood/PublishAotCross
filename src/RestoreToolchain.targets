@@ -1,0 +1,40 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="RestoreAotToolchain" Condition="'$(CustomAotToolChain)' != ''">
+    <PropertyGroup>
+      <_AotToolchainArch Condition="$(RuntimeIdentifier.EndsWith('-x64'))">x64</_AotToolchainArch>
+      <_AotToolchainArch Condition="$(RuntimeIdentifier.EndsWith('-arm64'))">arm64</_AotToolchainArch>
+      <_AotNeedsToolchainRestore Condition="'$(CustomAotToolChain)' == 'zig' and '$(UseExternalZig)' != 'true'">true</_AotNeedsToolchainRestore>
+      <_AotNeedsToolchainRestore Condition="'$(CustomAotToolChain)' == 'xwin'">true</_AotNeedsToolchainRestore>
+      <_AotToolchainIntermediate>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'aot-toolchain', '$(CustomAotToolChain)', '$(HostRuntimeIdentifier)', '$(_AotToolchainArch)'))</_AotToolchainIntermediate>
+      <_AotToolchainRemoveProperties>TargetFramework;TargetFrameworks;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;ManagePackageVersionsCentrally;RestoreLockedMode;RestorePackagesWithLockFile;NuGetLockFilePath;RestoreUseStaticGraphEvaluation</_AotToolchainRemoveProperties>
+    </PropertyGroup>
+
+    <Error Condition="'$(CustomAotToolChain)' == 'xwin' and '$(_AotToolchainArch)' == ''"
+           Text="XWin only supports win-x64 and win-arm64 targets." />
+    <Error Condition="'$(_AotNeedsToolchainRestore)' == 'true' and '$(CustomAotToolChain)' == 'zig' and '$(HostRuntimeIdentifier)' != 'win-x64' and '$(HostRuntimeIdentifier)' != 'win-arm64' and '$(HostRuntimeIdentifier)' != 'win-x86' and '$(HostRuntimeIdentifier)' != 'linux-x64' and '$(HostRuntimeIdentifier)' != 'linux-arm64' and '$(HostRuntimeIdentifier)' != 'osx-x64' and '$(HostRuntimeIdentifier)' != 'osx-arm64'"
+           Text="No bundled Zig toolset is available for host $(HostRuntimeIdentifier). Install Zig and use UseExternalZig=true." />
+    <Error Condition="'$(CustomAotToolChain)' == 'xwin' and '$(HostRuntimeIdentifier)' != 'win-x64' and '$(HostRuntimeIdentifier)' != 'win-arm64' and '$(HostRuntimeIdentifier)' != 'linux-x64' and '$(HostRuntimeIdentifier)' != 'linux-arm64' and '$(HostRuntimeIdentifier)' != 'osx-arm64'"
+           Text="No LLD toolset is available for host $(HostRuntimeIdentifier)." />
+
+    <ItemGroup Condition="'$(_AotNeedsToolchainRestore)' == 'true'">
+      <_AotToolchainProject Include="$(MSBuildThisFileDirectory)Toolchain.proj">
+        <AdditionalProperties>AotToolchainKind=$(CustomAotToolChain);AotToolchainHost=$(HostRuntimeIdentifier);AotToolchainArch=$(_AotToolchainArch);ZigVersion=$(ZigVersion);LLDVersion=$(LLDVersion);LLDRevision=$(LLDRevision);XWinVersion=$(XWinVersion);XWinRevision=$(XWinRevision);BaseIntermediateOutputPath=$(_AotToolchainIntermediate);MSBuildProjectExtensionsPath=$(_AotToolchainIntermediate);RestoreRootConfigDirectory=$(MSBuildProjectDirectory);RestorePackagesPath=$(NuGetPackageRoot);RestoreConfigFile=$(RestoreConfigFile);RestoreSources=$([MSBuild]::Escape('$(RestoreSources)'));RestoreFallbackFolders=$([MSBuild]::Escape('$(RestoreFallbackFolders)'));ImportDirectoryBuildProps=false;ImportDirectoryBuildTargets=false;PublishAot=false;PublishTrimmed=false;RuntimeIdentifier=;RuntimeIdentifiers=;TargetFramework=net8.0;TargetFrameworks=;RestoreUseStaticGraphEvaluation=false</AdditionalProperties>
+      </_AotToolchainProject>
+    </ItemGroup>
+    <Message Condition="'$(_AotNeedsToolchainRestore)' == 'true'" Importance="high"
+             Text="Restoring $(CustomAotToolChain) toolchain for host $(HostRuntimeIdentifier), target $(RuntimeIdentifier)..." />
+    <MSBuild Condition="'$(_AotNeedsToolchainRestore)' == 'true'"
+             Projects="@(_AotToolchainProject)" Targets="Restore" BuildInParallel="false"
+             RemoveProperties="$(_AotToolchainRemoveProperties)" />
+    <MSBuild Condition="'$(_AotNeedsToolchainRestore)' == 'true'"
+             Projects="@(_AotToolchainProject)" Targets="GetAotToolchainPaths" BuildInParallel="false"
+             RemoveProperties="$(_AotToolchainRemoveProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RestoredAotToolchainPath" />
+    </MSBuild>
+    <PropertyGroup>
+      <ZigPath Condition="'%(_RestoredAotToolchainPath.Kind)' == 'Zig'">%(_RestoredAotToolchainPath.Identity)</ZigPath>
+      <_AotRestoredCppLinker Condition="'%(_RestoredAotToolchainPath.Kind)' == 'Linker'">%(_RestoredAotToolchainPath.Identity)</_AotRestoredCppLinker>
+      <_AotRestoredXWinStore Condition="'%(_RestoredAotToolchainPath.Kind)' == 'Store'">%(_RestoredAotToolchainPath.Identity)</_AotRestoredXWinStore>
+    </PropertyGroup>
+  </Target>
+</Project>

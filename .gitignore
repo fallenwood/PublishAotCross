@@ -7,3 +7,5 @@ src/*.exe
 **.pubxml
 **.pubxml.user
 artifacts/**
+output-nupkg/**
+output-source/**

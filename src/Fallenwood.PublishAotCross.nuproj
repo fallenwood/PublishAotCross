@@ -16,23 +16,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Vezel.Zig.Toolsets.win-x64" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Vezel.Zig.Toolsets.win-arm64" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Vezel.Zig.Toolsets.win-x86" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Vezel.Zig.Toolsets.linux-x64" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Vezel.Zig.Toolsets.linux-arm64" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Vezel.Zig.Toolsets.osx-x64" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Vezel.Zig.Toolsets.osx-arm64" Version="$(ZigVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="XWin.Store.x64" Version="$(XWinVersion).$(XWinRevision)" />
-    <PackageReference Include="XWin.Store.arm64" Version="$(XWinVersion).$(XWinRevision)" />
-    <PackageReference Include="LLD.Link.Toolsets.win-x64" Version="$(LLDVersion).$(LLDRevision)" />
-    <PackageReference Include="LLD.Link.Toolsets.linux-x64" Version="$(LLDVersion).$(LLDRevision)" />
-    <PackageReference Include="LLD.Link.Toolsets.win-arm64" Version="$(LLDVersion).$(LLDRevision)" />
-    <PackageReference Include="LLD.Link.Toolsets.linux-arm64" Version="$(LLDVersion).$(LLDRevision)" />
-    <PackageReference Include="LLD.Link.Toolsets.osx-arm64" Version="$(LLDVersion).$(LLDRevision)" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="Fallenwood.PublishAotCross.props">
       <Pack>true</Pack>
       <PackagePath>build</PackagePath>
@@ -46,6 +29,14 @@
       <PackagePath>build</PackagePath>
     </None>
     <None Include="Crosscompile.targets">
+      <Pack>true</Pack>
+      <PackagePath>build</PackagePath>
+    </None>
+    <None Include="RestoreToolchain.targets">
+      <Pack>true</Pack>
+      <PackagePath>build</PackagePath>
+    </None>
+    <None Include="Toolchain.proj">
       <Pack>true</Pack>
       <PackagePath>build</PackagePath>
     </None>
@@ -81,6 +72,10 @@
     <None Include="Scripts/SetPath.cs">
       <Pack>true</Pack>
       <PackagePath>build/Scripts/SetPath.cs</PackagePath>
+    </None>
+    <None Include="Scripts/CreateXwinLibraryOverlay.cs">
+      <Pack>true</Pack>
+      <PackagePath>build/Scripts/CreateXwinLibraryOverlay.cs</PackagePath>
     </None>
   </ItemGroup>
 </Project>

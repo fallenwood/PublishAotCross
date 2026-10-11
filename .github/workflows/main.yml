@@ -11,6 +11,9 @@ on:
         description: 'Release version to create'
         required: false
 
+env:
+  NUPKG_TEST_VERSION: 42.42.42-ci.${{ github.run_id }}.${{ github.run_attempt }}
+
 jobs:
   build_multitarget_linux:
     strategy:
@@ -59,24 +62,24 @@ jobs:
           mkdir -p $HOME/.local/bin
           cp xwin-${xwin_version}-x86_64-unknown-linux-musl/xwin $HOME/.local/bin
           chmod +x $HOME/.local/bin/xwin
-      - name: Build (CI)
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          pwsh ./nuget_pack.ps1
-          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
-          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
-          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
-          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
-          dotnet publish -r linux-musl-arm -c Release test/Hello10.csproj -p:StripSymbols=true -o output-linux-musl-arm
-          dotnet publish -r win-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-x64
-          dotnet publish -r win-x64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-x64
-          dotnet publish -r win-x64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-x64
-          dotnet publish -r win-arm64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-win-arm64
-          dotnet publish -r win-arm64 -c Release test/Hello9.csproj -p:StripSymbols=true -o output-win-arm64
-          dotnet publish -r win-arm64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-win-arm64
+      - name: Pack local nupkg
+        shell: pwsh
+        run: ./nuget_pack.ps1 -Version $env:NUPKG_TEST_VERSION
 
-          dotnet publish -r linux-x64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-x64
-          dotnet publish -r linux-arm64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-arm64
+      - name: Build source targets (CI)
+        shell: pwsh
+        run: |
+          ./test/publish_source.ps1 -RuntimeIdentifiers @('linux-musl-arm64', 'linux-musl-x64', 'linux-musl-arm', 'win-x64', 'win-arm64')
+          ./test/publish_source.ps1 -RuntimeIdentifiers linux-musl-x64 -StaticExecutable
+
+      - name: Cross-compile using local nupkg (.NET 8/9/10)
+        shell: pwsh
+        run: |
+          ./test/publish_nupkg.ps1 -Version $env:NUPKG_TEST_VERSION -RuntimeIdentifiers @('linux-x64', 'linux-arm64', 'linux-musl-x64', 'linux-musl-arm64', 'linux-musl-arm', 'win-x64', 'win-arm64')
+
+      - name: Verify nupkg on-demand toolchain restore
+        shell: pwsh
+        run: ./test/verify_on_demand.ps1
 
   build_multitarget_windows:
     strategy:
@@ -106,19 +109,24 @@ jobs:
         run: ./src/download-llvm-objcopy.ps1
         shell: pwsh
 
-      - name: Build (CI)
-        run: |
-          pwsh ./nuget_pack.ps1
-          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
-          dotnet publish -r linux-musl-arm64 -c Release test/Hello.csproj -p:StripSymbols=true
-          dotnet publish -r linux-musl-x64 -c Release test/Hello.csproj -p:StripSymbols=true -o output-linux-musl-x64
-          dotnet publish -r linux-musl-arm -c Release test/Hello9.csproj -p:StripSymbols=true -o output-linux-musl-arm
-          dotnet publish -r linux-musl-x64 -c Release test/Hello10.csproj -p:StripSymbols=true -o output-linux-musl-x64
-          dotnet publish -r linux-musl-x64 -c Release test/HelloStatic8.csproj -p:StripSymbols=true -o output-linux-musl-x64
-          dotnet publish -r linux-musl-x64 -c Release test/HelloStatic10.csproj -p:StripSymbols=true -o output-linux-musl-x64
+      - name: Pack local nupkg
+        shell: pwsh
+        run: ./nuget_pack.ps1 -Version $env:NUPKG_TEST_VERSION
 
-          dotnet publish -r linux-x64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-x64
-          dotnet publish -r linux-arm64 -c Release test/TestNupkg.csproj -p:StripSymbols=true -o output-testnuget-linux-arm64
+      - name: Build source targets (CI)
+        shell: pwsh
+        run: |
+          ./test/publish_source.ps1 -RuntimeIdentifiers @('linux-musl-arm64', 'linux-musl-x64', 'linux-musl-arm')
+          ./test/publish_source.ps1 -RuntimeIdentifiers linux-musl-x64 -StaticExecutable
+
+      - name: Cross-compile using local nupkg (.NET 8/9/10)
+        shell: pwsh
+        run: |
+          ./test/publish_nupkg.ps1 -Version $env:NUPKG_TEST_VERSION -RuntimeIdentifiers @('linux-x64', 'linux-arm64', 'linux-musl-x64', 'linux-musl-arm64', 'linux-musl-arm')
+
+      - name: Verify nupkg on-demand toolchain restore
+        shell: pwsh
+        run: ./test/verify_on_demand.ps1
 
   build:
     strategy:
@@ -143,16 +151,28 @@ jobs:
         run: ./src/download-llvm-objcopy.ps1
         shell: pwsh
 
-      - name: Build (CI)
-        run: |
-          pwsh ./nuget_pack.ps1
-          dotnet build -c Release -t:Pack src/Fallenwood.PublishAotCross.nuproj
-          dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=true -p:UseExternalZig=true
+      - name: Pack local nupkg
+        shell: pwsh
+        run: ./nuget_pack.ps1 -Version $env:NUPKG_TEST_VERSION
+
+      - name: Build source targets (CI)
+        shell: pwsh
+        run: ./test/publish_source.ps1 -TargetFrameworks net8.0 -RuntimeIdentifiers linux-x64 -UseExternalZig
+
+      - name: Cross-compile local nupkg binary for runtime validation
+        shell: pwsh
+        run: ./test/publish_nupkg.ps1 -Version $env:NUPKG_TEST_VERSION -TargetFrameworks net8.0 -RuntimeIdentifiers linux-x64
       - name: Upload test binary
         uses: actions/upload-artifact@v4
         with:
           name: Hello
-          path: test/bin/Release/net8.0/linux-x64/publish/Hello
+          path: output-source/normal/net8.0/linux-x64/Hello
+      - name: Upload nupkg test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelloNupkg
+          path: output-nupkg/net8.0/linux-x64/HelloNupkg
+          if-no-files-found: error
 
   validate:
     needs: build
@@ -163,10 +183,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: Hello
-      - name: Launch
+      - name: Download nupkg test binary
+        uses: actions/download-artifact@v4
+        with:
+          name: HelloNupkg
+      - name: Launch source-target and nupkg binaries
         run: |
-          chmod +x ./Hello
+          chmod +x ./Hello ./HelloNupkg
           ./Hello
+          ./HelloNupkg
 
   release:
     needs: [validate, build_multitarget_linux, build_multitarget_windows]

@@ -3,29 +3,36 @@
 set -x
 
 if ! command -v zig > /dev/null; then
-  echo "Error: zig is not on the PATH. Install zig and make sure it's on PATH. Follow instructions at https://github.com/fallenwood/PublishAotCross"
+  echo "Error: zig is not on the PATH. Install zig and make sure it's on PATH. Follow instructions at https://github.com/fallenwood/PublishAotCross" >&2
   exit 1
 fi
 
-args="$*"
+# Force the NativeAOT module to survive linker garbage collection.
+zig_args=("-Wl,-u,__Module")
 
-# Works around zlib not being available with zig. This is not great.
-args=${args//-lz /}
+# Transform complete arguments, never substrings in a flattened command line.
+# This preserves filenames with spaces, literal glob characters, and empty args.
+for arg in "$@"; do
+  case "$arg" in
+    -lz|-Wl,-pie|-pie|-Wl,-e0x0|-Wl,--defsym,__xmknod=mknod)
+      continue
+      ;;
+    -static-pie)
+      # Match the Windows wrapper's Zig workaround: static, not static PIE.
+      arg=-static
+      ;;
+    -Wl,--discard-all)
+      arg=-Wl,--as-needed
+      ;;
+    --discard-all)
+      arg=--as-needed
+      ;;
+    "'-Wl,-rpath,\$ORIGIN'")
+      # Work around the quoted rpath emitted by older .NET versions.
+      arg='-Wl,-rpath,$ORIGIN'
+      ;;
+  esac
+  zig_args+=("$arg")
+done
 
-# Work around a .NET 8 Preview 6 issue
-args=${args//-Wl,-rpath,\$ORIGIN/-Wl,-rpath,\$ORIGIN}
-
-# Work around parameters unsupported by zig. Just drop them from the command line.
-args=${args//--discard-all/--as-needed}
-args=${args//-Wl,-pie /}
-args=${args//-pie /}
-args=${args//-Wl,-e0x0 /}
-
-# Works around zig linker dropping necessary parts of the executable.
-read -ra arr <<< "$args"
-arr=("${arr[@]:0:3}" "-Wl,-u,__Module" "${arr[@]:3}")
-args="${arr[*]}"
-
-
-# Run zig cc
-zig cc "${arr[@]}"
+exec zig cc "${zig_args[@]}"

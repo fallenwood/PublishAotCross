@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Restored separately at publish time: nupkg dependencies cannot vary by host RID. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <NuGetAudit>false</NuGetAudit>
+    <NuGetLockFilePath>$(MSBuildProjectExtensionsPath)packages.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageDownload Include="Vezel.Zig.Toolsets.$(AotToolchainHost)"
+                     Version="[$(ZigVersion)]" Condition="'$(AotToolchainKind)' == 'zig'" />
+    <PackageDownload Include="LLD.Link.Toolsets.$(AotToolchainHost)"
+                     Version="[$(LLDVersion).$(LLDRevision)]" Condition="'$(AotToolchainKind)' == 'xwin'" />
+    <PackageDownload Include="XWin.Store.$(AotToolchainArch)"
+                     Version="[$(XWinVersion).$(XWinRevision)]" Condition="'$(AotToolchainKind)' == 'xwin'" />
+  </ItemGroup>
+
+  <!-- Resolve the cache through NuGet settings, including custom globalPackagesFolder. -->
+  <Target Name="GetAotToolchainPaths" DependsOnTargets="_GetRestoreProjectStyle;_GetRestoreSettings" Returns="@(_AotToolchainPath)">
+    <PropertyGroup>
+      <_AotPackageRoot>$([MSBuild]::NormalizeDirectory('$(_OutputPackagesPath)'))</_AotPackageRoot>
+      <_ZigPackageId>$([System.String]::Copy('Vezel.Zig.Toolsets.$(AotToolchainHost)').ToLowerInvariant())</_ZigPackageId>
+      <_LldPackageId>$([System.String]::Copy('LLD.Link.Toolsets.$(AotToolchainHost)').ToLowerInvariant())</_LldPackageId>
+      <_XwinPackageId>$([System.String]::Copy('XWin.Store.$(AotToolchainArch)').ToLowerInvariant())</_XwinPackageId>
+      <_LldExecutable Condition="$(AotToolchainHost.StartsWith('win-'))">lld-link.exe</_LldExecutable>
+      <_LldExecutable Condition="'$(_LldExecutable)' == ''">lld-link</_LldExecutable>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AotToolchainPath Include="$(_AotPackageRoot)$(_ZigPackageId)/$(ZigVersion)/tools" Condition="'$(AotToolchainKind)' == 'zig'">
+        <Kind>Zig</Kind>
+      </_AotToolchainPath>
+      <_AotToolchainPath Include="$(_AotPackageRoot)$(_LldPackageId)/$(LLDVersion).$(LLDRevision)/tools/$(_LldExecutable)" Condition="'$(AotToolchainKind)' == 'xwin'">
+        <Kind>Linker</Kind>
+      </_AotToolchainPath>
+      <_AotToolchainPath Include="$(_AotPackageRoot)$(_XwinPackageId)/$(XWinVersion).$(XWinRevision)/tools/.xwin-store" Condition="'$(AotToolchainKind)' == 'xwin'">
+        <Kind>Store</Kind>
+      </_AotToolchainPath>
+    </ItemGroup>
+  </Target>
+</Project>
