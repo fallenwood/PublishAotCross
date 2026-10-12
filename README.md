@@ -18,6 +18,18 @@ The xwin implemetation is based on [Windows10CE's project](https://github.com/Wi
 
 ### Typical Cross build
 
+Only reference `Fallenwood.PublishAotCross`; no extra toolchain package references are needed. The nupkg has no fixed Zig/LLD/XWin dependencies. During NativeAOT publishing, a separate NuGet restore downloads only the toolchain needed for the current host and target:
+
+| Build scenario | Toolchain packages downloaded |
+|---|---|
+| Cross-build to Linux/macOS, or `AotPreferCustom=true` on those targets | `Vezel.Zig.Toolsets.<host RID>` |
+| Cross-build to `win-x64` | `LLD.Link.Toolsets.<host RID>` + `XWin.Store.x64` |
+| Cross-build to `win-arm64` | `LLD.Link.Toolsets.<host RID>` + `XWin.Store.arm64` |
+| Same-platform native build without `AotPreferCustom` | None |
+| Zig build with `UseExternalZig=true` | None |
+
+Toolchains use the NuGet cache and the consuming project's NuGet configuration (`RestoreSources`, `RestoreConfigFile`, and custom package cache paths are supported). The separate restore writes its assets under the consuming project's `obj/` directory, never into this package. Normal project restore and packing this package do not download toolchains. Even with `dotnet publish --no-restore`, the toolchain restore runs when needed; pre-populate the NuGet cache for offline publishing.
+
 #### Zig
 
 By default it relies on Zig provided by the unofficial [Vezel.Zig.Toolsets](https://github.com/vezel-dev/zig-toolsets) NuGet package. You can specify version of this package using the `ZigVersion` property. Instructions for using your own Zig binaries are near the end of this document.
@@ -41,9 +53,18 @@ Even though Zig allows crosscompiling for Windows as well, it's not possible to 
 
 #### XWin
 
-It relies on xwin and lld in system path to work.
+Publishing automatically restores the host-specific `LLD.Link.Toolsets` package and the target-specific `XWin.Store` package, which provide the linker and Windows SDK/CRT libraries. No system installation of xwin or lld is required on supported hosts. Source-target imports use the same on-demand restore as nupkg consumers.
 
-1. Install XWin and lld and make sure the executables are in path
+1. Use a supported host: Linux x64/arm64 or macOS arm64. The Linux LLD executable still requires compatible system runtime libraries; NuGet restores the tool, not OS packages.
+
+   The current Linux x64 LLD 22.1.8 binary needs `libxml2.so.2` (not `libxml2.so.16`), plus the C/C++ runtimes and zlib. On Ubuntu 24.04:
+
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y --no-install-recommends llvm libxml2
+   ```
+
+   CI deliberately uses Ubuntu 24.04. Ubuntu 26.04 provides the newer libxml2 ABI and cannot run this bundled binary out of the box. Use a compatible host/container, or provide a properly packaged compatible runtime/rebuilt linker; do not symlink `.so.16` to `.so.2`. Other distributions must provide the SONAMEs required by their host's LLD binary. Use `ldd <path-to-lld-link>` to diagnose missing libraries. Installing libxml2 does not require extra NuGet package references or download other-platform toolsets.
 
 2. To your project that is already using Native AOT, add a reference to this NuGet package.
 
@@ -58,6 +79,40 @@ This package auto detects if host and target platforms are different to determin
 ```
 dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferCustom=true
 ```
+
+## Testing source targets
+
+`test/Hello.csproj` is the single source-target test project for every framework and static/non-static variant. It defaults to .NET 8 and non-static publishing. `test/publish_source.ps1` passes `TargetFramework`, `RuntimeIdentifier`, and `StaticExecutable` to it, using the same explicit restore/publish pattern as the nupkg consumer tests:
+
+```powershell
+./test/publish_source.ps1 -TargetFrameworks net9.0 -RuntimeIdentifiers win-x64 -NoStripSymbols
+./test/publish_source.ps1 -TargetFrameworks net10.0 -RuntimeIdentifiers linux-musl-x64 -StaticExecutable -NoStripSymbols
+```
+
+The script explicitly restores each framework/RID before `publish --no-restore`, because CLI implicit restore can drop a `TargetFramework` override. Source and nupkg publishing scripts share `Configuration=Release` and `SelfContained=true` between restore and publish, so .NET 8 SDK restores the target runtime packs that NativeAOT publishing needs (avoiding `NETSDK1112`). It supports framework/RID arrays, `-UseExternalZig`, and `-NoStripSymbols`; ARM32 tests skip .NET 8. Published outputs are separated under `output-source/<normal-or-static>/<framework>/<RID>/`.
+
+Static builds default to invariant globalization and use separate `bin/static/` and `obj/static/` paths, so they cannot reuse a non-static native binary. Override `InvariantGlobalization` explicitly if needed. Choose target RIDs supported by the host/toolchain. The Unix and Windows Zig wrappers translate the complete `-static-pie` argument to `-static` as a compatibility workaround, producing statically linked, non-PIE Linux executables. Unix wrappers preserve argument boundaries, including paths with spaces; `gcc` delegates to the same implementation as `clang`.
+
+## Testing the local nupkg
+
+Both `Hello.csproj` and `HelloNupkg.csproj` use SDK-style project files with implicit usings and nullable reference types enabled. `Hello.csproj` imports the source targets; `HelloNupkg.csproj` only references the nupkg and does not import source targets.
+
+CI packs a unique package version into `artifacts/` before testing `HelloNupkg.csproj`. Both Linux and Windows runners publish it for .NET 8/9/10: Linux runners cover Linux GNU/MUSL and Windows x64/arm64 targets; Windows runners cover Linux GNU/MUSL targets. The Windows-built .NET 8 Linux x64 binary is also executed on Linux.
+
+To run the same package-consumer tests locally (PowerShell 7+):
+
+```powershell
+./nuget_pack.ps1 -Version 42.42.42-dev
+./test/publish_nupkg.ps1 -Version 42.42.42-dev -TargetFrameworks @('net8.0', 'net10.0') -RuntimeIdentifiers @('linux-arm64', 'linux-musl-x64', 'win-x64') -NoStripSymbols
+```
+
+Choose RIDs supported by your host. `test/nuget.config` restricts `Fallenwood.PublishAotCross` to the local source, and the script verifies that the restored package hash matches the nupkg just built. Outputs are separated under `output-nupkg/<framework>/<RID>/`. ARM32 tests skip .NET 8. Omit `-NoStripSymbols` when symbol-stripping tools are available. Packaging still requires the Windows `llvm-objcopy.exe` downloaded by `src/download-llvm-objcopy.ps1`, as in CI.
+
+## Testing on-demand toolchain restore
+
+Run `pwsh ./test/verify_on_demand.ps1` with PowerShell 7+ and .NET 8+ installed; no Python or Pester is needed. The checks verify the merged source project's framework/static parameters and Unix wrapper argument/exit-code handling, pack the actual nupkg, create consumers with no extra package references, and verify plain restore, host/target package selection, Windows/Zig and static Linux publishing, external Zig, and same-platform builds. Set `DOTNET` or pass `-Dotnet` to choose a specific dotnet executable. NuGet access or cached packages are required. The test package omits the optional Windows `llvm-objcopy.exe`; publishing tests use `StripSymbols=false`.
+
+CI runs this script on Linux and Windows, and publishes the source project's static Linux variant for .NET 8/9/10 on both hosts. When a .NET 8 SDK is installed, a pinned-SDK regression checks that the explicit restore graph requests the target runtime pack before `publish --no-restore`; checking the graph prevents a warm NuGet cache from hiding this bug. Static nupkg tests cover both Unix compiler wrappers and inspect the ELF headers to confirm no `PT_INTERP` or `PT_DYNAMIC` segment; on Linux x64 they also run the resulting executable. Temporary projects and command logs are removed after success and retained on failure; use `-KeepTemporaryFiles` to retain them after a successful run too.
 
 ## Tested Variants
 

@@ -1,0 +1,190 @@
+name: PR
+
+on:
+  pull_request:
+    branches: [ master ]
+
+env:
+  NUPKG_TEST_VERSION: 42.42.42-ci.${{ github.run_id }}.${{ github.run_attempt }}
+
+jobs:
+  build_multitarget_linux:
+    strategy:
+      matrix:
+        include:
+          # Bundled LLD 22.1.8 needs libxml2.so.2; Ubuntu 26.04 only provides .so.16.
+          - vm: ubuntu-24.04
+    runs-on: ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup dotnet 8.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup dotnet 9.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '9.0.x'
+      - name: Setup dotnet 10.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '10.0.x'
+      - name: Setup dotnet 11.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '11.0.x'
+          include-prerelease: true
+      - name: Install LLVM and LLD runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-suggests --no-install-recommends llvm libxml2
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "0.16.0"
+
+      - name: Setup xwin
+        run: |
+          xwin_version="0.9.0"
+          wget https://github.com/Jake-Shadle/xwin/releases/download/${xwin_version}/xwin-${xwin_version}-x86_64-unknown-linux-musl.tar.gz
+          tar -xf xwin-${xwin_version}-x86_64-unknown-linux-musl.tar.gz
+          mkdir -p $HOME/.local/bin
+          cp xwin-${xwin_version}-x86_64-unknown-linux-musl/xwin $HOME/.local/bin
+          chmod +x $HOME/.local/bin/xwin
+      - name: Pack local nupkg
+        shell: pwsh
+        run: ./nuget_pack.ps1 -Version $env:NUPKG_TEST_VERSION
+
+      - name: Build source targets (CI)
+        shell: pwsh
+        run: |
+          ./test/publish_source.ps1 -RuntimeIdentifiers @('linux-musl-arm64', 'linux-musl-x64', 'linux-musl-arm', 'win-x64', 'win-arm64')
+          ./test/publish_source.ps1 -RuntimeIdentifiers linux-musl-x64 -StaticExecutable
+
+      - name: Cross-compile using local nupkg (.NET 8/9/10)
+        shell: pwsh
+        run: |
+          ./test/publish_nupkg.ps1 -Version $env:NUPKG_TEST_VERSION -RuntimeIdentifiers @('linux-x64', 'linux-arm64', 'linux-musl-x64', 'linux-musl-arm64', 'linux-musl-arm', 'win-x64', 'win-arm64')
+
+      - name: Verify nupkg on-demand toolchain restore
+        shell: pwsh
+        run: ./test/verify_on_demand.ps1
+
+  build_multitarget_windows:
+    strategy:
+      matrix:
+        include:
+          - vm: windows-latest
+    runs-on: ${{ matrix.vm }}
+    name: Build Multi Target ${{ matrix.vm }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup dotnet 8.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup dotnet 9.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '9.0.x'
+      - name: Setup dotnet 10.0
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: true
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
+      - name: Pack local nupkg
+        shell: pwsh
+        run: ./nuget_pack.ps1 -Version $env:NUPKG_TEST_VERSION
+
+      - name: Build source targets (CI)
+        shell: pwsh
+        run: |
+          ./test/publish_source.ps1 -RuntimeIdentifiers @('linux-musl-arm64', 'linux-musl-x64', 'linux-musl-arm')
+          ./test/publish_source.ps1 -RuntimeIdentifiers linux-musl-x64 -StaticExecutable
+
+      - name: Cross-compile using local nupkg (.NET 8/9/10)
+        shell: pwsh
+        run: |
+          ./test/publish_nupkg.ps1 -Version $env:NUPKG_TEST_VERSION -RuntimeIdentifiers @('linux-x64', 'linux-arm64', 'linux-musl-x64', 'linux-musl-arm64', 'linux-musl-arm')
+
+      - name: Verify nupkg on-demand toolchain restore
+        shell: pwsh
+        run: ./test/verify_on_demand.ps1
+
+  build:
+    strategy:
+      matrix:
+        include:
+          - vm: windows-latest
+    runs-on: ${{ matrix.vm }}
+    name: Build and Validate ${{ matrix.vm }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "0.16.0"
+
+      - name: Download llvm-objcopy
+        run: ./src/download-llvm-objcopy.ps1
+        shell: pwsh
+
+      - name: Pack local nupkg
+        shell: pwsh
+        run: ./nuget_pack.ps1 -Version $env:NUPKG_TEST_VERSION
+
+      - name: Build source targets (CI)
+        shell: pwsh
+        run: ./test/publish_source.ps1 -TargetFrameworks net8.0 -RuntimeIdentifiers linux-x64 -UseExternalZig
+
+      - name: Cross-compile local nupkg binary for runtime validation
+        shell: pwsh
+        run: ./test/publish_nupkg.ps1 -Version $env:NUPKG_TEST_VERSION -TargetFrameworks net8.0 -RuntimeIdentifiers linux-x64
+      - name: Upload test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hello
+          path: output-source/normal/net8.0/linux-x64/Hello
+      - name: Upload nupkg test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelloNupkg
+          path: output-nupkg/net8.0/linux-x64/HelloNupkg
+          if-no-files-found: error
+
+  validate:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Try launching
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Hello
+      - name: Download nupkg test binary
+        uses: actions/download-artifact@v4
+        with:
+          name: HelloNupkg
+      - name: Launch source-target and nupkg binaries
+        run: |
+          chmod +x ./Hello ./HelloNupkg
+          ./Hello
+          ./HelloNupkg

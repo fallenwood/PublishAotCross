@@ -12,18 +12,22 @@ PublishAotCross is a NuGet package with MSBuild targets that helps resolve cross
 
 ### Build Commands
 ```bash
-dotnet build test/Hello.csproj
-dotnet build test/Hello9.csproj
-dotnet build test/Hello10.csproj
+dotnet msbuild test/Hello.csproj -restore -t:Build -p:TargetFramework=net8.0
+dotnet msbuild test/Hello.csproj -restore -t:Build -p:TargetFramework=net9.0
+dotnet msbuild test/Hello.csproj -restore -t:Build -p:TargetFramework=net10.0
+dotnet msbuild test/Hello.csproj -restore -t:Build -p:TargetFramework=net10.0 -p:StaticExecutable=true
 ```
 
 ### Testing Cross-Compilation
 ```bash
-# Test with Zig (requires Zig installation)
-dotnet publish -r linux-x64 -c Release test/Hello.csproj -p:StripSymbols=false
+# Source targets; explicitly restore each selected framework before publishing
+pwsh -File test/publish_source.ps1 -TargetFrameworks net10.0 -RuntimeIdentifiers linux-arm64 -NoStripSymbols
 
-# Test with external Zig
-dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferCustom=true /p:UseExternalZig=true
+# Static variant (use a host/toolchain that supports this target)
+pwsh -File test/publish_source.ps1 -TargetFrameworks net10.0 -RuntimeIdentifiers linux-musl-x64 -StaticExecutable -NoStripSymbols
+
+# On-demand toolchain integration checks; no Python or Pester required
+pwsh -File test/verify_on_demand.ps1
 ```
 
 ### Required Before Each Commit
@@ -42,9 +46,12 @@ dotnet publish -r linux-x64 /p:PublishAot=true /p:AotPreferCustom=true /p:UseExt
   - `gcc`, `clang`, `clang.cmd` - Wrapper scripts for Zig compiler
   - `objcopy` - LLVM objcopy wrapper
 - **`test/`** - Test projects
-  - `Hello.csproj` - .NET 8.0 test project
-  - `Hello9.csproj` - .NET 9.0 test project
-  - `Hello10.csproj` - .NET 10.0 test project
+  - `Hello.csproj` - Parameterized source-target test project; select `TargetFramework` and `StaticExecutable` via MSBuild properties (defaults: net8.0, non-static)
+  - `HelloNupkg.csproj` - Local nupkg consumer, with no source target imports
+  - `publish_source.ps1` - Parameterized source-target cross-compilation test matrix
+  - `publish_nupkg.ps1` - Local nupkg cross-compilation test matrix
+  - `verify_on_demand.ps1` - PowerShell-only integration checks for project parameters and on-demand toolchain restore
+  - All `Hello*.csproj` files use the SDK-style project format
   - `Program.cs` - Simple Hello World test program
 
 ## Code Standards and Guidelines
