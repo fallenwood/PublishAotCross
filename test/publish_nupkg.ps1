@@ -29,11 +29,14 @@ foreach ($framework in $TargetFrameworks) {
             "-p:TargetFramework=$framework",
             "-p:PublishAotCrossPackageVersion=$Version",
             "-p:RuntimeIdentifier=$rid",
+            '-p:Configuration=Release',
+            '-p:SelfContained=true',
             "-p:StripSymbols=$stripSymbols"
         )
         $output = Join-Path $repoRoot "output-nupkg/$framework/$rid"
         Write-Host "Testing local nupkg $Version -> $framework / $rid"
 
+        # Restore with publish's self-contained mode so SDK 8 downloads runtime packs.
         # The source mapping restricts Fallenwood.PublishAotCross to artifacts/.
         dotnet restore $project --configfile $config @properties
         if ($LASTEXITCODE -ne 0) {

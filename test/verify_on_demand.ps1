@@ -25,14 +25,15 @@ function Invoke-CommandLine {
         [string]$Executable,
         [string[]]$Arguments,
         [hashtable]$Environment = @{},
-        [int]$ExpectedExitCode = 0
+        [int]$ExpectedExitCode = 0,
+        [string]$WorkingDirectory = $repoRoot
     )
 
     $script:CommandNumber++
     $log = Join-Path $work "command-$($script:CommandNumber).log"
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = $Executable
-    $startInfo.WorkingDirectory = $repoRoot
+    $startInfo.WorkingDirectory = $WorkingDirectory
     $startInfo.UseShellExecute = $false
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
@@ -86,10 +87,15 @@ function Assert-SetEqual {
 }
 
 function Invoke-Test {
-    param([string]$Name, [scriptblock]$Body, [switch]$Skip)
+    param(
+        [string]$Name,
+        [scriptblock]$Body,
+        [switch]$Skip,
+        [string]$SkipReason = 'requires a supported non-Windows host'
+    )
     if ($Skip) {
         $script:Skipped++
-        Write-Host "SKIP: $Name (requires a supported non-Windows host)"
+        Write-Host "SKIP: $Name ($SkipReason)"
         return
     }
     try {
@@ -309,10 +315,34 @@ exit "${FAKE_ZIG_EXIT_CODE:-0}"
 
     Invoke-Test 'Windows nupkg publish restores only host LLD and target store' -Skip:($hostRid -notin @('linux-x64', 'linux-arm64', 'osx-arm64')) {
         $project = New-Consumer 'windows'
-        $null = Invoke-Dotnet @('restore', $project, '-p:RuntimeIdentifier=win-x64')
-        $null = Invoke-Dotnet @('publish', $project, '-r', 'win-x64', '-c', 'Release', '--no-restore')
+        $publishProperties = @('-p:RuntimeIdentifier=win-x64', '-p:Configuration=Release', '-p:SelfContained=true')
+        $null = Invoke-Dotnet (@('restore', $project) + $publishProperties)
+        $null = Invoke-Dotnet (@('publish', $project, '--no-restore') + $publishProperties)
         Assert-SetEqual @(Get-ToolchainDownloads $project) @("LLD.Link.Toolsets.$hostRid", 'XWin.Store.x64') 'Windows toolchain packages'
         Assert-True (Test-Path (Join-Path (Split-Path $project -Parent) 'bin/Release/net8.0/win-x64/publish/Consumer.exe')) 'Windows executable missing'
+    }
+
+    $sdk8Matches = [regex]::Matches((Invoke-Dotnet @('--list-sdks')), '(?m)^(8\.\d+\.\d+(?:-\S+)?)\s+\[')
+    $sdk8Version = $null
+    if ($sdk8Matches.Count -gt 0) {
+        $sdk8Version = $sdk8Matches[$sdk8Matches.Count - 1].Groups[1].Value
+    }
+    Invoke-Test 'SDK 8 explicit restore includes runtime packs needed by publish --no-restore' -Skip:($null -eq $sdk8Version) -SkipReason 'no .NET 8 SDK installed' {
+        $project = New-Consumer 'sdk8-runtime-pack'
+        $directory = Split-Path $project -Parent
+        @{ sdk = @{ version = $sdk8Version; rollForward = 'disable' } } | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $directory 'global.json') -Encoding utf8
+        $activeSdk = Invoke-CommandLine -Executable $Dotnet -Arguments @('--version') -WorkingDirectory $directory
+        Assert-Equal $activeSdk.Trim() $sdk8Version 'Pinned .NET 8 SDK'
+
+        $publishProperties = @('-p:RuntimeIdentifier=linux-x64', '-p:Configuration=Release', '-p:SelfContained=true', '-p:AotPreferCustom=true')
+        $null = Invoke-CommandLine -Executable $Dotnet -Arguments (@('restore', $project) + $publishProperties) -WorkingDirectory $directory
+        $spec = Get-Content (Join-Path $directory 'obj/Consumer.csproj.nuget.dgspec.json') -Raw | ConvertFrom-Json -AsHashtable
+        $downloads = @($spec.projects[$project].frameworks['net8.0'].downloadDependencies.name)
+        # Check the restore graph, not cache contents: a warm cache must not mask missing packs.
+        Assert-True ('Microsoft.NETCore.App.Runtime.linux-x64' -in $downloads) 'Restore must request the target runtime pack'
+        $null = Invoke-CommandLine -Executable $Dotnet -Arguments (@('publish', $project, '--no-restore') + $publishProperties) -WorkingDirectory $directory
+        Assert-True (Test-Path (Join-Path $directory 'bin/Release/net8.0/linux-x64/publish/Consumer')) 'SDK 8 published executable missing'
+        Assert-SetEqual @(Get-ToolchainDownloads $project) @("Vezel.Zig.Toolsets.$hostRid") 'SDK 8 toolchain packages'
     }
 
     Invoke-Test 'Zig nupkg publish restores only host Zig' {

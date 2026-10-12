@@ -26,6 +26,8 @@ foreach ($framework in $TargetFrameworks) {
         $properties = @(
             "-p:TargetFramework=$framework",
             "-p:RuntimeIdentifier=$rid",
+            '-p:Configuration=Release',
+            '-p:SelfContained=true',
             "-p:StaticExecutable=$($StaticExecutable.IsPresent.ToString().ToLowerInvariant())",
             "-p:UseExternalZig=$($UseExternalZig.IsPresent.ToString().ToLowerInvariant())",
             "-p:StripSymbols=$((-not $NoStripSymbols).ToString().ToLowerInvariant())"
@@ -33,6 +35,7 @@ foreach ($framework in $TargetFrameworks) {
         $output = Join-Path $repoRoot "output-source/$variant/$framework/$rid"
         Write-Host "Testing source targets -> $framework / $rid / $variant"
 
+        # Match publish's configuration and self-contained mode, including on SDK 8.
         # CLI implicit restore can drop TargetFramework; restore it explicitly instead.
         dotnet restore $project --configfile $config @properties
         if ($LASTEXITCODE -ne 0) {

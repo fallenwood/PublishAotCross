@@ -19,7 +19,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - vm: ubuntu-26.04
+          # Bundled LLD 22.1.8 needs libxml2.so.2; Ubuntu 26.04 only provides .so.16.
+          - vm: ubuntu-24.04
     runs-on: ${{ matrix.vm }}
     name: Build Multi Target ${{ matrix.vm }}
     steps:
@@ -42,8 +43,10 @@ jobs:
         with:
           dotnet-version: '11.0.x'
           include-prerelease: true
-      - name: Install llvm
-        run: sudo apt-get install --no-install-suggests --no-install-recommends llvm
+      - name: Install LLVM and LLD runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-suggests --no-install-recommends llvm libxml2
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
